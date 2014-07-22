@@ -8,13 +8,14 @@ namespace Entities;
 class User {
 	/**
 	 * @primaryKey
+	 * @autoIncrement
 	 * @column(type="int")
 	 * @var int
 	 */
 	public $id;
 
 	/**
-	 * @column
+	 * @column(type="string", length="50")
 	 * @var string
 	 */
 	public $fullname;

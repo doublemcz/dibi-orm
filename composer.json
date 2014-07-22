@@ -1,6 +1,6 @@
 {
 	"name": "doublemcz/dibiorm",
-	"description": "ORM system based on Dibi",
+	"description": "ORM system based on dibi",
 	"minimum-stability": "dev",
 	"license": "proprietary",
 	"authors": [

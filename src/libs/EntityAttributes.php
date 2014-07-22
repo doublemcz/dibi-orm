@@ -14,6 +14,8 @@ class EntityAttributes
 	protected $primaryKey;
 	/** @var string */
 	protected $entityNamespace;
+	/** @var string */
+	protected $autoIncrementFieldName;
 
 	/**
 	 * @param string $className
@@ -60,10 +62,14 @@ class EntityAttributes
 			$properties = $this->parseDoc($propertyReflection->getDocComment());
 			if (array_key_exists('column', $properties)) {
 				$this->columns[$property->getName()] = array();
+			}
 
-				if (array_key_exists('primaryKey', $properties)) {
-					$this->primaryKey[] = $property->getName();
-				}
+			if (array_key_exists('primaryKey', $properties)) {
+				$this->primaryKey[] = $property->getName();
+			}
+
+			if (array_key_exists('autoIncrement', $properties)) {
+				$this->autoIncrementFieldName = $property->getName();
 			}
 		}
 	}
@@ -137,7 +143,7 @@ class EntityAttributes
 	/**
 	 * @return array
 	 */
-	public function getColumns()
+	public function getProperties()
 	{
 		return $this->columns;
 	}
@@ -148,5 +154,13 @@ class EntityAttributes
 	public function getClassName()
 	{
 		return $this->className;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getAutoIncrementFieldName()
+	{
+		return $this->autoIncrementFieldName;
 	}
 }
