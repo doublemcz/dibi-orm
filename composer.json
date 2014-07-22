@@ -1,0 +1,12 @@
+{
+	"name": "doublemcz/dibiorm",
+	"description": "ORM system based on Dibi",
+	"minimum-stability": "dev",
+	"license": "proprietary",
+	"authors": [
+		{
+			"name": "Martin Míka",
+			"email": "mail@martinmika.eu"
+		}
+	]
+}
