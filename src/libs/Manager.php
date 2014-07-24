@@ -47,7 +47,7 @@ class Manager
 			->where($primaryKey)
 			->fetch();
 
-		$instance = $this->createFlatClass($entityAttributes, $data);
+		$instance = DataHelperLoader::CreateFlatClass($this, $entityAttributes, $data);
 		if ($instance) {
 			$this->registerClass($instance, $entityAttributes, self::FLAG_INSTANCE_UPDATE);
 		}
@@ -62,13 +62,34 @@ class Manager
 	public function persist($entity)
 	{
 		if (!is_object($entity)) {
-			throw new \RuntimeException('Given value is not an object');
+			throw new \RuntimeException('Given value is not an object.');
 		}
 
 		$entityAttributes = $this->createEntityAttributes($entity);
 		$this->registerClass($entity, $entityAttributes, self::FLAG_INSTANCE_INSERT);
 	}
 
+	/**
+	 * @param object $entity
+	 * @throws \RuntimeException
+	 */
+	public function delete($entity)
+	{
+		if (!is_object($entity)) {
+			throw new \RuntimeException('Given value is not an object');
+		}
+
+		$classKey = spl_object_hash($entity);
+		if (FALSE === array_key_exists($classKey, $this->managedClasses)) {
+			throw new \RuntimeException('You are trying to delete an entity that is not persisted. Did you fetch it from database?');
+		}
+
+		$this->managedClasses[$classKey]['flag'] = self::FLAG_INSTANCE_DELETE;
+	}
+
+	/**
+	 * @param object $instance
+	 */
 	public function flush($instance = NULL)
 	{
 		if ($instance) {
@@ -87,10 +108,23 @@ class Manager
 		}
 	}
 
+	/**
+	 * @param string $entityName And identifier like 'User', 'Article', etc...
+	 * @return RepositoryManager
+	 */
+	public function getRepository($entityName)
+	{
+		return new RepositoryManager($this, $this->createEntityAttributes($entityName));
+	}
+
+	/**
+	 * @param object $instance
+	 * @return array
+	 * @throws \RuntimeException
+	 */
 	private function getInstanceFromManagedClasses($instance)
 	{
-		$entityAttributes = $this->createEntityAttributes($instance);
-		$classKey = $this->buildClassKey($instance, $entityAttributes);
+		$classKey = spl_object_hash($instance);
 		if (!array_key_exists($classKey, $this->managedClasses)) {
 			throw new \RuntimeException('You try to get instance flag of class that is not managed');
 		}
@@ -123,6 +157,23 @@ class Manager
 	/**
 	 * @param object $instance
 	 * @param EntityAttributes $entityAttributes
+	 * @return \DibiResult|int
+	 */
+	private function deleteItem($instance, EntityAttributes $entityAttributes)
+	{
+		$affectedRows = $this->dibiConnection
+			->delete($entityAttributes->getTable())
+			->where($this->buildPrimaryKey($instance, $entityAttributes))
+			->execute(\dibi::AFFECTED_ROWS);
+
+		unset($this->managedClasses[spl_object_hash($instance)]);
+
+		return $affectedRows;
+	}
+
+	/**
+	 * @param object $instance
+	 * @param EntityAttributes $entityAttributes
 	 * @throws \RuntimeException
 	 * @return \DibiResult|int
 	 */
@@ -135,79 +186,46 @@ class Manager
 				throw new \RuntimeException('Entity has set autoIncrement flag but no incremented values was returned from DB.');
 			}
 
-			$this->setPropertyValue($instance, $entityAttributes->getAutoIncrementFieldName(), $insertId);
+			DataHelperLoader::setPropertyValue($instance, $entityAttributes->getAutoIncrementFieldName(), $insertId);
 		}
 
-		$classKey = $this->buildClassKey($instance, $entityAttributes);
+		$classKey = spl_object_hash($instance);
 		$this->managedClasses[$classKey]['flag'] = self::FLAG_INSTANCE_UPDATE;
-		$this->managedClasses[$classKey]['valueHash'] = $this->getInstanceValuesHash($insertId, $entityAttributes);
+		$this->managedClasses[$classKey]['valueHash'] = $this->getInstanceValuesHash($instance, $entityAttributes);
 
 		return $insertId;
-	}
-
-	private function deleteItem($instance, EntityAttributes $entityAttributes)
-	{
-		throw new \Exception('Not implemented');
 	}
 
 	/**
 	 * @param object $instance
 	 * @param EntityAttributes $entityAttributes
-	 * @param string $valueHash
+	 * @param string $originValueHash
 	 * @return bool
 	 */
-	private function updateItem($instance, EntityAttributes $entityAttributes, $valueHash)
+	private function updateItem($instance, EntityAttributes $entityAttributes, $originValueHash)
 	{
-		if ($valueHash == $this->getInstanceValuesHash($instance, $entityAttributes)) {
+		if ($originValueHash == $this->getInstanceValuesHash($instance, $entityAttributes)) {
 			return FALSE;
 		}
 
 		$values = $this->getInstanceValueMap($instance, $entityAttributes);
 
-		return $this->dibiConnection->update($entityAttributes->getTable(), $values)->execute(\dibi::AFFECTED_ROWS) == 1;
+		return $this->dibiConnection->update($entityAttributes->getTable(), $values)->where($this->buildPrimaryKey($instance, $entityAttributes))->execute(\dibi::AFFECTED_ROWS) == 1;
 	}
 
 	private function getInstanceValueMap($instance, EntityAttributes $entityAttributes)
 	{
 		$values = array();
 		foreach (array_keys($entityAttributes->getProperties()) as $propertyName) {
-			$values[$propertyName] = (string)$this->getPropertyValue($instance, $propertyName);
+			$values[$propertyName] = (string)DataHelperLoader::getPropertyValue($instance, $propertyName);
 		}
 
 		return $values;
 	}
 
-	/**
-	 * @param EntityAttributes $entityAttributes
-	 * @param \DibiRow|FALSE $data
-	 * @return mixed|NULL
-	 */
-	protected function createFlatClass(EntityAttributes $entityAttributes, $data)
+	public function registerClass($instance, EntityAttributes $entityAttributes, $flag)
 	{
-		if (empty($data)) {
-			return NULL;
-		}
-
-		$className = $entityAttributes->getClassName();
-		$instance = new $className;
-		foreach ($entityAttributes->getProperties() as $property => $columnAttributes) {
-			if (empty($data->$property)) {
-				continue;
-			}
-
-			$this->setPropertyValue($instance, $property, $data->$property);
-		}
-
-		return $instance;
-	}
-
-	protected function registerClass($instance, EntityAttributes $entityAttributes, $flag)
-	{
-		$hashedKey = $this->buildClassKey($instance, $entityAttributes);
-		if (array_key_exists($hashedKey, $this->managedClasses)) {
-			throw new \RuntimeException('Given class has been already registered.');
-		}
-
+		$hashedKey = spl_object_hash($instance);
 		$this->managedClasses[$hashedKey] = array(
 			'instance' => $instance,
 			'valueHash' => $this->getInstanceValuesHash($instance, $entityAttributes),
@@ -220,22 +238,11 @@ class Manager
 	 * @param EntityAttributes $entityAttributes
 	 * @return string
 	 */
-	private function buildClassKey($instance, EntityAttributes $entityAttributes)
-	{
-		$key = $this->buildPrimaryKey($instance, $entityAttributes);
-		return md5($entityAttributes->getClassName() . '|' . serialize($key));
-	}
-
-	/**
-	 * @param object $instance
-	 * @param EntityAttributes $entityAttributes
-	 * @return string
-	 */
 	protected function getInstanceValuesHash($instance, EntityAttributes $entityAttributes)
 	{
 		$values = array();
-		foreach ($entityAttributes->getProperties() as $property => $parameters) {
-			$values[] = (string)$this->getPropertyValue($instance, $property);
+		foreach (array_keys($entityAttributes->getProperties()) as $propertyName) {
+			$values[] = (string)DataHelperLoader::getPropertyValue($instance, $propertyName);
 		}
 
 		return md5(serialize($values));
@@ -251,46 +258,10 @@ class Manager
 		$primaryKey = $entityAttributes->getPrimaryKey();
 		$values = array();
 		foreach ($primaryKey as $propertyName) {
-			$values[] = $this->getPropertyValue($instance, $propertyName);
+			$values[] = DataHelperLoader::getPropertyValue($instance, $propertyName);
 		}
 
 		return array_combine($entityAttributes->getPrimaryKey(), $values);
-	}
-
-	/**
-	 * @param object $instance
-	 * @param string $propertyName
-	 * @return mixed
-	 */
-	private function getPropertyValue($instance, $propertyName)
-	{
-		$reflection = new \ReflectionProperty($instance, $propertyName);
-		if (!$reflection->isPublic()) {
-			$reflection->setAccessible(TRUE);
-			$value = $reflection->getValue($instance);
-			$reflection->setAccessible(FALSE);
-		} else {
-			$value = $reflection->getValue($instance);
-		}
-
-		return $value;
-	}
-
-	/**
-	 * @param object $instance
-	 * @param string $property
-	 * @param mixed $value
-	 */
-	private function setPropertyValue($instance, $property, $value)
-	{
-		$reflection = new \ReflectionProperty($instance, $property);
-		if (!$reflection->isPublic()) {
-			$reflection->setAccessible(TRUE);
-			$reflection->setValue($value);
-			$reflection->setAccessible(FALSE);
-		} else {
-			$reflection->setValue($instance, $value);
-		}
 	}
 
 	/**
@@ -301,6 +272,15 @@ class Manager
 	 */
 	protected function createEntityAttributes($entityName)
 	{
+		return new EntityAttributes($this->getEntityClassName($entityName));
+	}
+
+	/**
+	 * @param string|object $entityName
+	 * @return string
+	 */
+	public function getEntityClassName($entityName)
+	{
 		if (is_object($entityName)) {
 			$className = get_class($entityName);
 		} else {
@@ -309,7 +289,7 @@ class Manager
 				: $entityName;
 		}
 
-		return new EntityAttributes($className);
+		return $className;
 	}
 
 	public function createQuery()

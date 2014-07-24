@@ -16,6 +16,10 @@ class EntityAttributes
 	protected $entityNamespace;
 	/** @var string */
 	protected $autoIncrementFieldName;
+	/** @var array */
+	protected $oneToMany = array();
+	/** @var array */
+	protected $oneToOne = array();
 
 	/**
 	 * @param string $className
@@ -59,18 +63,67 @@ class EntityAttributes
 		$reflection = new \ReflectionClass($entityName);
 		foreach ($reflection->getProperties() as $property) {
 			$propertyReflection = new \ReflectionProperty($reflection->getName(), $property->getName());
-			$properties = $this->parseDoc($propertyReflection->getDocComment());
-			if (array_key_exists('column', $properties)) {
+			$attributeProperties = $this->parseDoc($propertyReflection->getDocComment());
+			if (array_key_exists('column', $attributeProperties)) {
 				$this->columns[$property->getName()] = array();
 			}
 
-			if (array_key_exists('primaryKey', $properties)) {
+			if (array_key_exists('primaryKey', $attributeProperties)) {
 				$this->primaryKey[] = $property->getName();
 			}
 
-			if (array_key_exists('autoIncrement', $properties)) {
+			if (array_key_exists('autoIncrement', $attributeProperties)) {
 				$this->autoIncrementFieldName = $property->getName();
 			}
+
+			$this->findRelations($property, $attributeProperties);
+		}
+	}
+
+	/**
+	 * @param \ReflectionProperty $property
+	 * @param $attributeProperties
+	 */
+	protected function findRelations(\ReflectionProperty $property, $attributeProperties)
+	{
+		$this->handleOneToXRelations($property, $attributeProperties);
+	}
+
+	/**
+	 * @param \ReflectionProperty $property
+	 * @param $attributeProperties
+	 * @throws DocParsingException
+	 */
+	protected function handleOneToXRelations(\ReflectionProperty $property, $attributeProperties)
+	{
+		$oneToX = array_key_exists('oneToMany', $attributeProperties)
+			? $attributeProperties['oneToMany']
+			: array_key_exists('oneToOne', $attributeProperties)
+				? $attributeProperties['oneToOne']
+				: FALSE;
+
+		if ($oneToX) {
+			if (empty($attributeProperties[$oneToX]['entity'])) {
+				throw new DocParsingException(
+					sprintf(
+						'You set property "%s" as %s but the entity attribute is missing. You have to specify entity attribute like this @%s(entity="EntityName").',
+						$property->getName(), $oneToX, $oneToX
+					)
+				);
+			}
+
+			if (!array_key_exists('join', $attributeProperties)) {
+				throw new DocParsingException(
+					sprintf('You set property "%s" as %s but no join is specified. Did you forget to set @join?', $property->getName(), $oneToX)
+				);
+			}
+
+			$this->$oneToX[$property->getName()] = array(
+				'property' => $property->getName(),
+				'entity' => $attributeProperties[$oneToX]['entity'],
+				'join' => $attributeProperties['join'],
+				'staticJoin' => !empty($attributeProperties['staticJoin']) ? $attributeProperties['staticJoin'] : array(),
+			);
 		}
 	}
 
@@ -88,7 +141,7 @@ class EntityAttributes
 		$result = array();
 		$lines = explode("\n", $docRaw);
 		foreach ($lines as $line) {
-			preg_match('~\s+\*\s@([a-zA-Z]+)( .+)?~', $line, $matches);
+			preg_match('~\s+\*\s@([a-zA-Z]+)(.+)?~', $line, $matches);
 			if (!empty($matches)) {
 				if (!empty($matches[2])) {
 					$result[$matches[1]] = $this->parseDocParameters(trim($matches[2]));
@@ -162,5 +215,21 @@ class EntityAttributes
 	public function getAutoIncrementFieldName()
 	{
 		return $this->autoIncrementFieldName;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function getRelationsOneToOne()
+	{
+		return $this->oneToOne;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function getRelationsOneToMany()
+	{
+		return $this->oneToMany;
 	}
 }
