@@ -63,67 +63,69 @@ class EntityAttributes
 		$reflection = new \ReflectionClass($entityName);
 		foreach ($reflection->getProperties() as $property) {
 			$propertyReflection = new \ReflectionProperty($reflection->getName(), $property->getName());
-			$attributeProperties = $this->parseDoc($propertyReflection->getDocComment());
-			if (array_key_exists('column', $attributeProperties)) {
+			$docLineParameters = $this->parseDoc($propertyReflection->getDocComment());
+			if (array_key_exists('column', $docLineParameters)) {
 				$this->columns[$property->getName()] = array();
 			}
 
-			if (array_key_exists('primaryKey', $attributeProperties)) {
+			if (array_key_exists('primaryKey', $docLineParameters)) {
 				$this->primaryKey[] = $property->getName();
 			}
 
-			if (array_key_exists('autoIncrement', $attributeProperties)) {
+			if (array_key_exists('autoIncrement', $docLineParameters)) {
 				$this->autoIncrementFieldName = $property->getName();
 			}
 
-			$this->findRelations($property, $attributeProperties);
+			$this->findRelations($property, $docLineParameters);
 		}
 	}
 
 	/**
 	 * @param \ReflectionProperty $property
-	 * @param $attributeProperties
+	 * @param $docLineParameters
 	 */
-	protected function findRelations(\ReflectionProperty $property, $attributeProperties)
+	protected function findRelations(\ReflectionProperty $property, $docLineParameters)
 	{
-		$this->handleOneToXRelations($property, $attributeProperties);
+		$this->handleOneToXRelations($property, $docLineParameters);
 	}
 
 	/**
 	 * @param \ReflectionProperty $property
-	 * @param $attributeProperties
+	 * @param $docLineParameters
 	 * @throws DocParsingException
 	 */
-	protected function handleOneToXRelations(\ReflectionProperty $property, $attributeProperties)
+	protected function handleOneToXRelations(\ReflectionProperty $property, $docLineParameters)
 	{
-		$oneToX = array_key_exists('oneToMany', $attributeProperties)
-			? $attributeProperties['oneToMany']
-			: array_key_exists('oneToOne', $attributeProperties)
-				? $attributeProperties['oneToOne']
-				: FALSE;
+		$oneToX = array_key_exists('oneToMany', $docLineParameters)
+			? 'oneToMany'
+			: (array_key_exists('oneToOne', $docLineParameters) ? 'oneToOne' : FALSE);
 
 		if ($oneToX) {
-			if (empty($attributeProperties[$oneToX]['entity'])) {
+			if (empty($docLineParameters[$oneToX]['entity'])) {
 				throw new DocParsingException(
 					sprintf(
-						'You set property "%s" as %s but the entity attribute is missing. You have to specify entity attribute like this @%s(entity="EntityName").',
-						$property->getName(), $oneToX, $oneToX
+						'You set property "%s" as "%s" but the entity attribute is missing. You have to specify entity attribute like this @%s(entity="EntityName"). Class %s.',
+						$property->getName(), $oneToX, $oneToX, $property->class
 					)
 				);
 			}
 
-			if (!array_key_exists('join', $attributeProperties)) {
+			if (!array_key_exists('join', $docLineParameters)) {
 				throw new DocParsingException(
-					sprintf('You set property "%s" as %s but no join is specified. Did you forget to set @join?', $property->getName(), $oneToX)
+					sprintf('You set property "%s" as "%s" but no join is specified. Did you forget to set @join? Class %s.',
+						$property->getName(), $oneToX, $property->class
+					)
 				);
 			}
 
-			$this->$oneToX[$property->getName()] = array(
+			$joinParameters = array(
 				'property' => $property->getName(),
-				'entity' => $attributeProperties[$oneToX]['entity'],
-				'join' => $attributeProperties['join'],
-				'staticJoin' => !empty($attributeProperties['staticJoin']) ? $attributeProperties['staticJoin'] : array(),
+				'entity' => $docLineParameters[$oneToX]['entity'],
+				'join' => $docLineParameters['join'],
+				'staticJoin' => !empty($docLineParameters['staticJoin']) ? $docLineParameters['staticJoin'] : array(),
 			);
+
+			$this->{$oneToX}[$property->getName()] = $joinParameters;
 		}
 	}
 

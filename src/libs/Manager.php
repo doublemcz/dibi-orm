@@ -14,10 +14,18 @@ class Manager
 	protected $entityNamespace = NULL;
 	/** @var array */
 	protected $managedClasses = array();
+	/** @var string */
+	protected $proxiesPath;
 
 	public function __construct($parameters, $cacheStorage)
 	{
 		$this->dibiConnection = new \DibiConnection($parameters['database']);
+		if (empty($parameters['proxiesPath']) || !is_dir($parameters['proxiesPath'])) {
+			throw new MissingArgumentException('You have to set valid proxy path. It\'s parameter proxiesPath');
+		} else {
+			$this->proxiesPath = $parameters['proxiesPath'];
+		}
+
 		if (!empty($parameters['entityNamespace'])) {
 			$this->entityNamespace = $parameters['entityNamespace'];
 		}
@@ -275,6 +283,13 @@ class Manager
 		return new EntityAttributes($this->getEntityClassName($entityName));
 	}
 
+	public function createProxy($className)
+	{
+		if (!class_exists($className)) {
+			throw new ClassNotFoundException('You have to pass valid class name');
+		}
+	}
+
 	/**
 	 * @param string|object $entityName
 	 * @return string
@@ -318,5 +333,13 @@ class Manager
 	public function setEntityNamespace($namespace)
 	{
 		$this->entityNamespace = $namespace;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getProxiesPath()
+	{
+		return $this->proxiesPath;
 	}
 }

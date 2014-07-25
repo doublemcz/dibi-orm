@@ -15,6 +15,7 @@ $parameters = array(
 		'driver' => 'mysqli',
 	),
 	'entityNamespace' => 'Entities',
+	'proxiesPath' => __DIR__ . '/temp',
 );
 
 $entityManager = new \doublemcz\dibiorm\Manager($parameters, NULL);

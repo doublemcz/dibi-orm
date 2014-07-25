@@ -38,9 +38,29 @@ class DataHelperLoader {
 	public static function handleRelations($manager, $instance, EntityAttributes $entityAttributes)
 	{
 		foreach ($entityAttributes->getRelationsOneToMany() as $propertyName => $relation) {
-			$targetPropertyAttributes = new EntityAttributes($manager->getEntityClassName($relation['entity']));
-			self::setPropertyValue($instance, $propertyName, new ResultCollection($manager, $targetPropertyAttributes));
+			$targetEntityAttributes = new EntityAttributes($manager->getEntityClassName($relation['entity']));
+			self::setPropertyValue($instance, $propertyName, new ResultCollection($manager, $targetEntityAttributes));
 		}
+
+		foreach ($entityAttributes->getRelationsOneToOne() as $propertyName => $relation) {
+			$targetEntityAttributes = new EntityAttributes($manager->getEntityClassName($relation['entity']));
+			self::setPropertyValue($instance, $propertyName, self::createProxyClass($manager, $targetEntityAttributes));
+		}
+	}
+
+	/**
+	 * @param Manager $manager
+	 * @param EntityAttributes $targetEntityAttributes
+	 */
+	public static function createProxyClass(Manager $manager, EntityAttributes $targetEntityAttributes)
+	{
+		$proxyPath = sprintf(
+			'%s\%s.php',
+			$manager->getProxiesPath(),
+			str_replace('\\', '', $targetEntityAttributes->getClassName())
+		);
+
+		f($proxyPath);
 	}
 
 	/**

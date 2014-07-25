@@ -1,0 +1,5 @@
+<?php
+namespace doublemcz\dibiorm\proxies\##CLASS_NAMESPACE##;
+
+class ##CLASS_NAME## extends ##ORIGIN_CLASS_NAME## {
+}

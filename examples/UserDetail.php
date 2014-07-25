@@ -13,12 +13,12 @@ class UserDetail {
 	 * @var int
 	 */
 	public $id;
-
-	/**
-	 * @oneToOne(entity="User")
-	 * @var User
-	 */
-	public $user;
+//
+//	/**
+//	 * @oneToOne(entity="User")
+//	 * @var User
+//	 */
+//	public $user;
 
 	/**
 	 * @column
