@@ -29,6 +29,8 @@ class Manager
 		if (!empty($parameters['entityNamespace'])) {
 			$this->entityNamespace = $parameters['entityNamespace'];
 		}
+
+		$this->autoLoadProxies();
 	}
 
 	/**
@@ -221,6 +223,11 @@ class Manager
 		return $this->dibiConnection->update($entityAttributes->getTable(), $values)->where($this->buildPrimaryKey($instance, $entityAttributes))->execute(\dibi::AFFECTED_ROWS) == 1;
 	}
 
+	/**
+	 * @param object $instance
+	 * @param EntityAttributes $entityAttributes
+	 * @return array
+	 */
 	private function getInstanceValueMap($instance, EntityAttributes $entityAttributes)
 	{
 		$values = array();
@@ -231,6 +238,11 @@ class Manager
 		return $values;
 	}
 
+	/**
+	 * @param object $instance
+	 * @param EntityAttributes $entityAttributes
+	 * @param int $flag
+	 */
 	public function registerClass($instance, EntityAttributes $entityAttributes, $flag)
 	{
 		$hashedKey = spl_object_hash($instance);
@@ -305,6 +317,19 @@ class Manager
 		}
 
 		return $className;
+	}
+
+	private function autoLoadProxies()
+	{
+		if ($handle = opendir($this->proxiesPath)) {
+			while (FALSE !== ($entry = readdir($handle))) {
+				if (FALSE !== strpos($entry, '.php')) {
+					require_once($this->proxiesPath. DIRECTORY_SEPARATOR . $entry);
+				}
+			}
+
+			closedir($handle);
+		}
 	}
 
 	public function createQuery()

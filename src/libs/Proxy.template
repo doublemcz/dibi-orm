@@ -1,5 +1,41 @@
 <?php
 namespace doublemcz\dibiorm\proxies\##CLASS_NAMESPACE##;
 
-class ##CLASS_NAME## extends ##ORIGIN_CLASS_NAME## {
+use doublemcz\dibiorm\Manager;
+
+class ##CLASS_NAME## extends \##ORIGIN_CLASS_NAME## {
+	/** @var Manager */
+	private $manager;
+	/** @var bool */
+	private $isInitialized = FALSE;
+
+	public function __construct(Manager $manager)
+	{
+		$this->manager = $manager;
+	}
+
+	public function __get($property)
+	{
+		if (!$this->isInitialized) {
+			$this->load();
+		}
+
+		parent::__get($property);
+	}
+
+	public function __set($property, $value)
+   {
+      if (!$this->isInitialized) {
+         $this->load();
+      }
+
+      parent::__set($property, $value);
+   }
+
+   private function load()
+   {
+      // TODO load dat somehow
+      f('LOAD DATA :-)');
+      $this->initialized = true;
+   }
 }

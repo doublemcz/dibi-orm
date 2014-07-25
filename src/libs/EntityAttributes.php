@@ -165,6 +165,7 @@ class EntityAttributes
 		if (0 === strpos($docParametersString, '(')) {
 			// Cut parentheses
 			$docParametersString = preg_replace('~\((.+?)\)~', '$1', $docParametersString);
+			// Parses string parameter="value", parameter='value'
 			preg_match_all('~(.+?)=[\'"](.+?)[\'"](,\s?)?~', $docParametersString, $matches);
 			$result = array();
 			if (!empty($matches[1])) {

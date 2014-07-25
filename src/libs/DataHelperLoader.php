@@ -60,7 +60,30 @@ class DataHelperLoader {
 			str_replace('\\', '', $targetEntityAttributes->getClassName())
 		);
 
-		f($proxyPath);
+		if (!is_file($proxyPath)) {
+			self::createProxyClassFile($proxyPath, $targetEntityAttributes);
+		}
+
+		$proxyClassName = sprintf('doublemcz\dibiorm\proxies\%s', $targetEntityAttributes->getClassName());
+
+		return new $proxyClassName($manager);
+	}
+
+	public static function createProxyClassFile($proxyPath, EntityAttributes $targetEntityAttributes)
+	{
+		$classReflection = new \ReflectionClass($targetEntityAttributes->getClassName());
+		$replaces = array(
+			'CLASS_NAMESPACE' => $classReflection->getNamespaceName(),
+			'CLASS_NAME' => $classReflection->getShortName(),
+			'ORIGIN_CLASS_NAME' => $classReflection->getName(),
+		);
+		$proxyFileContent = file_get_contents(__DIR__ . '/Proxy.template');
+		foreach ($replaces as $key => $value) {
+			$proxyFileContent = str_replace('##' . $key . '##', $value, $proxyFileContent);
+		}
+
+		file_put_contents($proxyPath, $proxyFileContent);
+		require_once($proxyPath);
 	}
 
 	/**
