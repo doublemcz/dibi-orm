@@ -39,7 +39,21 @@ class ##CLASS_NAME## implements IProxy {
          $this->load();
       }
 
-      parent::__set($property, $value);
+      $this->class->{$property} = $value;
+   }
+
+   public function __call($method, $arguments)
+   {
+      if (!$this->isInitialized) {
+         $this->load();
+      }
+
+      return call_user_method($method, $this->class, $arguments);
+   }
+
+   public static function __callStatic($method, $arguments)
+   {
+      throw new \RuntimeException('Not implemented');
    }
 
    private function load()

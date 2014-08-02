@@ -45,4 +45,4 @@ $entityManager = new \doublemcz\dibiorm\Manager($parameters, NULL);
 /** @var \Entities\User $user */
 $user = $entityManager->find('User', 1);
 $detail = $user->getDetail();
-f($detail->note);
+echo $detail->note;
