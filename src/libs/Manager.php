@@ -290,12 +290,17 @@ class Manager
 	 * @param string|object $entityName Can be name of the class of instance itself
 	 * @return EntityAttributes
 	 */
-	protected function createEntityAttributes($entityName)
+	public function createEntityAttributes($entityName)
 	{
-		$className = $this->getEntityClassName($entityName);
-		$interfaces = class_implements($className);
-		if (in_array('doublemcz\dibiorm\IProxy', $interfaces)) {
-			$className = get_parent_class ($className);
+		if (is_object($entityName)) {
+			$interfaces = class_implements($entityName);
+			if (in_array('doublemcz\dibiorm\IProxy', $interfaces)) {
+				$className = get_class($entityName->getClassInstance());
+			} else {
+				$className = get_class($entityName);
+			}
+		} else {
+			$className = $this->getEntityClassName($entityName);
 		}
 
 		return new EntityAttributes($className);
@@ -314,13 +319,9 @@ class Manager
 	 */
 	public function getEntityClassName($entityName)
 	{
-		if (is_object($entityName)) {
-			$className = get_class($entityName);
-		} else {
-			$className = $this->entityNamespace
-				? ($this->entityNamespace . '\\' . $entityName)
-				: $entityName;
-		}
+		$className = $this->entityNamespace
+			? ($this->entityNamespace . '\\' . $entityName)
+			: $entityName;
 
 		return $className;
 	}
@@ -330,7 +331,7 @@ class Manager
 		if ($handle = opendir($this->proxiesPath)) {
 			while (FALSE !== ($entry = readdir($handle))) {
 				if (FALSE !== strpos($entry, '.php')) {
-					require_once($this->proxiesPath. DIRECTORY_SEPARATOR . $entry);
+					require_once($this->proxiesPath . DIRECTORY_SEPARATOR . $entry);
 				}
 			}
 
@@ -352,7 +353,7 @@ class Manager
 			->fetch();
 
 		if (!empty($data)) {
-			DataHelperLoader::loadClass($this, $proxy, $data, $entityAttributes);
+			DataHelperLoader::loadClass($this, $proxy->getClassInstance(), $data, $entityAttributes);
 		}
 	}
 

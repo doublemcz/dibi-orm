@@ -44,4 +44,5 @@ $entityManager = new \doublemcz\dibiorm\Manager($parameters, NULL);
 /*** ONE TO MANY RELATION **/
 /** @var \Entities\User $user */
 $user = $entityManager->find('User', 1);
-f($user->getDetail()->note);
+$detail = $user->getDetail();
+f($detail->note);

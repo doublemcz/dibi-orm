@@ -50,12 +50,12 @@ class DataHelperLoader
 	public static function handleRelations($manager, $instance, EntityAttributes $entityAttributes)
 	{
 		foreach ($entityAttributes->getRelationsOneToMany() as $propertyName => $relation) {
-			$targetEntityAttributes = new EntityAttributes($manager->getEntityClassName($relation['entity']));
+			$targetEntityAttributes = $manager->createEntityAttributes($relation['entity']);
 			self::setPropertyValue($instance, $propertyName, new ResultCollection($manager, $targetEntityAttributes));
 		}
 
 		foreach ($entityAttributes->getRelationsOneToOne() as $propertyName => $relation) {
-			$targetEntityAttributes = new EntityAttributes($manager->getEntityClassName($relation['entity']));
+			$targetEntityAttributes = $manager->createEntityAttributes($relation['entity']);
 			$proxyClass = self::createProxyClass($manager, $targetEntityAttributes);
 			self::setPropertyValue($instance, $propertyName, $proxyClass);
 			$joinMap = array();
@@ -86,8 +86,9 @@ class DataHelperLoader
 		}
 
 		$proxyClassName = sprintf('doublemcz\dibiorm\proxies\%s', $targetEntityAttributes->getClassName());
+		$entityClassName = $targetEntityAttributes->getClassName();
 
-		return new $proxyClassName($manager);
+		return new $proxyClassName($manager, new $entityClassName());
 	}
 
 	public static function createProxyClassFile($proxyPath, EntityAttributes $targetEntityAttributes)
@@ -96,7 +97,6 @@ class DataHelperLoader
 		$replaces = array(
 			'CLASS_NAMESPACE' => $classReflection->getNamespaceName(),
 			'CLASS_NAME' => $classReflection->getShortName(),
-			'ORIGIN_CLASS_NAME' => $classReflection->getName(),
 		);
 		$proxyFileContent = file_get_contents(__DIR__ . '/Proxy.template');
 		foreach ($replaces as $key => $value) {

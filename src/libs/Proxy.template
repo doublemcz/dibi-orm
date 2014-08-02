@@ -4,26 +4,33 @@ namespace doublemcz\dibiorm\proxies\##CLASS_NAMESPACE##;
 use doublemcz\dibiorm\Manager;
 use doublemcz\dibiorm\IProxy;
 
-class ##CLASS_NAME## extends \##ORIGIN_CLASS_NAME## implements IProxy {
+class ##CLASS_NAME## implements IProxy {
 	/** @var Manager */
 	private $manager;
 	/** @var bool */
 	private $isInitialized = FALSE;
 	/** @var array */
 	protected $joiningMap;
+	/** @var object */
+	private $class;
 
-	public function __construct(Manager $manager)
+	/**
+	 * @param Manager$manager
+	 * @param object $class
+	 */
+	public function __construct(Manager $manager, $class)
 	{
 		$this->manager = $manager;
+		$this->class = $class;
 	}
 
-	public function __get($property)
+	public function &__get($property)
 	{
 		if (!$this->isInitialized) {
 			$this->load();
 		}
 
-		parent::__get($property);
+		return $this->class->{$property};
 	}
 
 	public function __set($property, $value)
@@ -41,8 +48,19 @@ class ##CLASS_NAME## extends \##ORIGIN_CLASS_NAME## implements IProxy {
       $this->manager->loadProxy($this);
    }
 
+	/**
+	 * @return array
+	 */
    public function getJoiningMap()
    {
       return $this->joiningMap;
+   }
+
+	/**
+	 * @return object;
+	 */
+   public function getClassInstance()
+   {
+      return $this->class;
    }
 }
