@@ -1,13 +1,16 @@
 <?php
-require __DIR__ . '/lib/dibi/dibi.php';
-require __DIR__ . '/lib/tracy/tracy.php';
 require __DIR__ . '/../src/dibiorm.php';
 require __DIR__ . '/User.php';
 require __DIR__ . '/UserLog.php';
 require __DIR__ . '/UserDetail.php';
 require __DIR__ . '/debug.php';
+require __DIR__ . '/composer/vendor/autoload.php';
 
 \Tracy\Debugger::enable();
+
+$storage = new Nette\Caching\Storages\FileStorage('temp');
+$storage = new Nette\Caching\Storages\MemoryStorage();
+$cache = new Nette\Caching\Cache($storage);
 
 $parameters = array(
 	'database' => array(
@@ -21,7 +24,7 @@ $parameters = array(
 	'proxiesPath' => __DIR__ . '/temp',
 );
 
-$entityManager = new \doublemcz\dibiorm\Manager($parameters, NULL);
+$entityManager = new \doublemcz\dibiorm\Manager($parameters, $cache);
 
 /**** ADD NEW USER **/
 //$user = new \Entities\User();
@@ -46,12 +49,20 @@ $entityManager = new \doublemcz\dibiorm\Manager($parameters, NULL);
 
 /*** ONE TO MANY RELATION **/
 /** @var \Entities\User $user */
-$user = $entityManager->find('User', 1);
-$userLog = $user->getUserLog();
-dump($userLog);
-dump($userLog[0]);
+//$user = $entityManager->find('User', 1);
+//$userLog = $user->getUserLog();
+//dump($userLog);
+
+
 /*** ONE TO ONE RELATION **/
 /** @var \Entities\User $user */
 //$user = $entityManager->find('User', 1);
 //$detail = $user->getDetail();
 //dump($detail);
+
+/**** Speed test - loop over 10 000 records. ****/
+for ($idx = 0; $idx < 1000; $idx++) {
+	$user = $entityManager->find('User', 1);
+}
+
+dump($entityManager);

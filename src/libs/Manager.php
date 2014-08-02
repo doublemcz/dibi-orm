@@ -16,6 +16,8 @@ class Manager
 	protected $managedClasses = array();
 	/** @var string */
 	protected $proxiesPath;
+	/** @var object */
+	protected $cacheStorage;
 
 	public function __construct($parameters, $cacheStorage)
 	{
@@ -31,6 +33,7 @@ class Manager
 		}
 
 		$this->autoLoadProxies();
+		$this->cacheStorage = $cacheStorage;
 	}
 
 	/**
@@ -245,7 +248,8 @@ class Manager
 	 */
 	public function registerClass($instance, EntityAttributes $entityAttributes, $flag)
 	{
-		$hashedKey = spl_object_hash($instance);
+		$primaryKey = $this->buildPrimaryKey($instance, $entityAttributes);
+		$hashedKey = md5(get_class($instance) . serialize($primaryKey));
 		$this->managedClasses[$hashedKey] = array(
 			'instance' => $instance,
 			'valueHash' => $this->getInstanceValuesHash($instance, $entityAttributes),
@@ -302,6 +306,13 @@ class Manager
 		} else {
 			$className = $this->getEntityClassName($entityName);
 		}
+
+		if ($this->cacheStorage) {
+			 return $this->cacheStorage->load($className, function() use ($className) {
+				return new EntityAttributes($className);
+			 });
+		}
+
 
 		return new EntityAttributes($className);
 	}

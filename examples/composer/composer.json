@@ -1,0 +1,14 @@
+{
+    "name": "mail_000/temp",
+    "require": {
+        "nette/caching": "*",
+        "tracy/tracy": "v2.2.2",
+        "dg/dibi": "v2.2.2"
+    },
+    "authors": [
+        {
+            "name": "Martin Mika",
+            "email": "mail@martinmika.eu"
+        }
+    ]
+}
