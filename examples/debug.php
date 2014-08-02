@@ -1,10 +1,7 @@
 <?php
 function f($what, $notDie = FALSE)
 {
-	echo '<pre>';
-	print_r($what);
-	echo '</pre>';
-
+	dump($what);
 	if (!$notDie) {
 		exit;
 	}

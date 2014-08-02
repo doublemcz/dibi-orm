@@ -1,10 +1,13 @@
 <?php
 require __DIR__ . '/lib/dibi/dibi.php';
+require __DIR__ . '/lib/tracy/tracy.php';
 require __DIR__ . '/../src/dibiorm.php';
 require __DIR__ . '/User.php';
 require __DIR__ . '/UserLog.php';
 require __DIR__ . '/UserDetail.php';
 require __DIR__ . '/debug.php';
+
+\Tracy\Debugger::enable();
 
 $parameters = array(
 	'database' => array(
