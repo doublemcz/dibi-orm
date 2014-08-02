@@ -16,7 +16,7 @@ class User {
 
 	/**
 	 * @oneToMany(entity="UserLog")
-	 * @join(column="userId", referenceColumn="id")
+	 * @join(column="id", referenceColumn="userId")
 	 * @staticJoin(column="type", value="error")
 	 * @var User
 	 */
@@ -24,7 +24,7 @@ class User {
 
 	/**
 	 * @oneToOne(entity="UserDetail")
-	 * @join(column="userId", referenceColumn="id")
+	 * @join(column="id", referenceColumn="userId")
 	 * @var UserDetail
 	 */
 	protected $detail;

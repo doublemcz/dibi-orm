@@ -292,7 +292,13 @@ class Manager
 	 */
 	protected function createEntityAttributes($entityName)
 	{
-		return new EntityAttributes($this->getEntityClassName($entityName));
+		$className = $this->getEntityClassName($entityName);
+		$interfaces = class_implements($className);
+		if (in_array('doublemcz\dibiorm\IProxy', $interfaces)) {
+			$className = get_parent_class ($className);
+		}
+
+		return new EntityAttributes($className);
 	}
 
 	public function createProxy($className)
@@ -329,6 +335,24 @@ class Manager
 			}
 
 			closedir($handle);
+		}
+	}
+
+	public function loadProxy(IProxy $proxy)
+	{
+		$joiningColumns = $proxy->getJoiningMap();
+		if (empty($joiningColumns)) {
+			throw new \RuntimeException('Joining columns cannot be empty.');
+		}
+
+		$entityAttributes = $this->createEntityAttributes($proxy);
+		$data = $this->dibiConnection->select(array_keys($entityAttributes->getProperties()))
+			->from($entityAttributes->getTable())
+			->where($joiningColumns)
+			->fetch();
+
+		if (!empty($data)) {
+			DataHelperLoader::loadClass($this, $proxy, $data, $entityAttributes);
 		}
 	}
 

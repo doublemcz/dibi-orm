@@ -2,7 +2,8 @@
 
 namespace doublemcz\dibiorm;
 
-class DataHelperLoader {
+class DataHelperLoader
+{
 	/**
 	 * @param Manager $manager
 	 * @param EntityAttributes $entityAttributes
@@ -17,6 +18,19 @@ class DataHelperLoader {
 
 		$className = $entityAttributes->getClassName();
 		$instance = new $className;
+		self::loadClass($manager, $instance, $data, $entityAttributes);
+
+		return $instance;
+	}
+
+	/**
+	 * @param Manager $manager
+	 * @param object $instance
+	 * @param \DibiRow $data
+	 * @param EntityAttributes $entityAttributes
+	 */
+	public static function loadClass(Manager $manager, $instance, $data, EntityAttributes $entityAttributes)
+	{
 		foreach ($entityAttributes->getProperties() as $property => $columnAttributes) {
 			if (empty($data->$property)) {
 				continue;
@@ -26,8 +40,6 @@ class DataHelperLoader {
 		}
 
 		self::handleRelations($manager, $instance, $entityAttributes);
-
-		return $instance;
 	}
 
 	/**
@@ -44,7 +56,16 @@ class DataHelperLoader {
 
 		foreach ($entityAttributes->getRelationsOneToOne() as $propertyName => $relation) {
 			$targetEntityAttributes = new EntityAttributes($manager->getEntityClassName($relation['entity']));
-			self::setPropertyValue($instance, $propertyName, self::createProxyClass($manager, $targetEntityAttributes));
+			$proxyClass = self::createProxyClass($manager, $targetEntityAttributes);
+			self::setPropertyValue($instance, $propertyName, $proxyClass);
+			$joinMap = array();
+
+			$joinMap[$relation['join']['referenceColumn']] = self::getPropertyValue($instance, $relation['join']['column']);
+			if (!empty($relation['staticJoin'])) {
+				$joinMap[$relation['staticJoin']['column']] = $relation['staticJoin']['value'];
+			}
+
+			self::setPropertyValue($proxyClass, 'joiningMap', $joinMap);
 		}
 	}
 
@@ -99,7 +120,7 @@ class DataHelperLoader {
 			$reflection->setValue($instance, $value);
 			$reflection->setAccessible(FALSE);
 		} else {
-			$reflection->setValue($instance, $value);
+			$instance->{$property} = $value;
 		}
 	}
 
