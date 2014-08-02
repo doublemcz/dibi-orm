@@ -5,14 +5,14 @@ use doublemcz\dibiorm\Manager;
 use doublemcz\dibiorm\IProxy;
 
 class ##CLASS_NAME## implements IProxy {
+	/** @var object */
+	private $class;
 	/** @var Manager */
 	private $manager;
 	/** @var bool */
 	private $isInitialized = FALSE;
 	/** @var array */
 	protected $joiningMap;
-	/** @var object */
-	private $class;
 
 	/**
 	 * @param Manager$manager

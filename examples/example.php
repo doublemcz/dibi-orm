@@ -41,11 +41,17 @@ $entityManager = new \doublemcz\dibiorm\Manager($parameters, NULL);
 
 /**** FIND USERS **/
 //$users = $entityManager->getRepository('User')->findBy();
-//f($users, 1);
+//dump($users);
 
 
 /*** ONE TO MANY RELATION **/
 /** @var \Entities\User $user */
 $user = $entityManager->find('User', 1);
-$detail = $user->getDetail();
-echo $detail->note;
+$userLog = $user->getUserLog();
+dump($userLog);
+dump($userLog[0]);
+/*** ONE TO ONE RELATION **/
+/** @var \Entities\User $user */
+//$user = $entityManager->find('User', 1);
+//$detail = $user->getDetail();
+//dump($detail);
