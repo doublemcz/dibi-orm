@@ -4,7 +4,7 @@
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "f5c0aa4f45fb46b6d8754a0b10d24fe7",
+    "hash": "f5411ca8ead3ea6b90bb0e7b53547ae5",
     "packages": [
         {
             "name": "dg/dibi",
@@ -290,6 +290,7 @@
     "stability-flags": [
 
     ],
+    "prefer-stable": false,
     "platform": [
 
     ],

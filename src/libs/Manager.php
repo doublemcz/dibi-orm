@@ -51,7 +51,7 @@ class Manager
 		$args = func_get_args();
 		unset($args[0]);
 		if (count($entityAttributes->getPrimaryKey()) != count(array_values($args))) {
-			throw new \RuntimeException('You try to find and entity with full primary key. Did you forget to specify an another value as an argument?');
+			throw new \RuntimeException('You try to find an entity without full primary key. Did you forget to specify an another value as an argument?');
 		}
 
 		$primaryKey = array_combine($entityAttributes->getPrimaryKey(), array_values($args));
@@ -250,11 +250,13 @@ class Manager
 	{
 		$primaryKey = $this->buildPrimaryKey($instance, $entityAttributes);
 		$hashedKey = md5(get_class($instance) . serialize($primaryKey));
-		$this->managedClasses[$hashedKey] = array(
-			'instance' => $instance,
-			'valueHash' => $this->getInstanceValuesHash($instance, $entityAttributes),
-			'flag' => $flag,
-		);
+		if (!in_array($hashedKey, $this->managedClasses)) {
+			$this->managedClasses[$hashedKey] = array(
+				'instance' => $instance,
+				'valueHash' => $this->getInstanceValuesHash($instance, $entityAttributes),
+				'flag' => $flag,
+			);
+		}
 	}
 
 	/**
@@ -308,9 +310,9 @@ class Manager
 		}
 
 		if ($this->cacheStorage) {
-			 return $this->cacheStorage->load($className, function() use ($className) {
+			return $this->cacheStorage->load($className, function () use ($className) {
 				return new EntityAttributes($className);
-			 });
+			});
 		}
 
 

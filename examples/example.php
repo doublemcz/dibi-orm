@@ -19,6 +19,7 @@ $parameters = array(
 		'password' => '',
 		'database' => 'dibiorm',
 		'driver' => 'mysqli',
+		'profiler' => TRUE,
 	),
 	'entityNamespace' => 'Entities',
 	'proxiesPath' => __DIR__ . '/temp',
@@ -61,8 +62,8 @@ $entityManager = new \doublemcz\dibiorm\Manager($parameters, $cache);
 //dump($detail);
 
 /**** Speed test - loop over 10 000 records. ****/
-for ($idx = 0; $idx < 1000; $idx++) {
-	$user = $entityManager->find('User', 1);
-}
+//for ($idx = 0; $idx < 1000; $idx++) {
+//	$user = $entityManager->find('User', 1);
+//}
 
 dump($entityManager);
