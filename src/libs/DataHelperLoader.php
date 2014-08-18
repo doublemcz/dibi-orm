@@ -50,13 +50,13 @@ class DataHelperLoader
 	public static function handleRelations($manager, $instance, ClassMetadata $entityAttributes)
 	{
 		foreach ($entityAttributes->getRelationsOneToMany() as $propertyName => $relation) {
-			$targetEntityAttributes = $manager->createEntityAttributes($relation['entity']);
+			$targetEntityAttributes = $manager->createClassMetadata($relation['entity']);
 			$entityAttributes->getPropertyReflection($propertyName)
 				->setValue($instance, new ResultCollection($manager, $targetEntityAttributes));
 		}
 
 		foreach ($entityAttributes->getRelationsOneToOne() as $propertyName => $relation) {
-			$targetEntityAttributes = $manager->createEntityAttributes($relation['entity']);
+			$targetEntityAttributes = $manager->createClassMetadata($relation['entity']);
 			$proxyClass = self::createProxyClass($manager, $targetEntityAttributes);
 			$entityAttributes->getPropertyReflection($propertyName)
 				->setValue($instance, $proxyClass);
@@ -132,7 +132,6 @@ class DataHelperLoader
 		if (!$reflection->isPublic()) {
 			$reflection->setAccessible(TRUE);
 			$value = $reflection->getValue($instance);
-			$reflection->setAccessible(FALSE);
 		} else {
 			$value = $reflection->getValue($instance);
 		}

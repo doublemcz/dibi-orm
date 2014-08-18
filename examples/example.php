@@ -60,6 +60,8 @@ $entityManager = new \doublemcz\dibiorm\Manager($parameters, $cache);
 //dump($detail);
 
 /**** Speed test - loop over 10 000 records. ****/
-for ($idx = 1; $idx < 10000; $idx++) {
+for ($idx = 1; $idx < 1000; $idx++) {
 	$user = $entityManager->find('User', $idx);
 }
+
+//dump($entityManager);

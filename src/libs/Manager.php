@@ -47,7 +47,7 @@ class Manager
 	public function find($entityName, $id)
 	{
 		$this->handleConnection();
-		$entityAttributes = $this->createEntityAttributes($entityName);
+		$entityAttributes = $this->createClassMetadata($entityName);
 		$args = func_get_args();
 		unset($args[0]);
 		if (count($entityAttributes->getPrimaryKey()) != count(array_values($args))) {
@@ -78,7 +78,7 @@ class Manager
 			throw new \RuntimeException('Given value is not an object.');
 		}
 
-		$entityAttributes = $this->createEntityAttributes($entity);
+		$entityAttributes = $this->createClassMetadata($entity);
 		$this->registerClass($entity, $entityAttributes, self::FLAG_INSTANCE_INSERT);
 	}
 
@@ -92,12 +92,28 @@ class Manager
 			throw new \RuntimeException('Given value is not an object');
 		}
 
-		$classKey = spl_object_hash($entity);
+		$classKey = $this->getEntityClassHashKey($entity);
 		if (FALSE === array_key_exists($classKey, $this->managedClasses)) {
 			throw new \RuntimeException('You are trying to delete an entity that is not persisted. Did you fetch it from database?');
 		}
 
 		$this->managedClasses[$classKey]['flag'] = self::FLAG_INSTANCE_DELETE;
+	}
+
+	/**
+	 * @param object $instance
+	 * @param ClassMetadata $classMetadata
+	 * @return string
+	 */
+	public function getEntityClassHashKey($instance, ClassMetadata $classMetadata = NULL)
+	{
+		if (!$classMetadata) {
+			$classMetadata = $this->createClassMetadata($instance);
+		}
+
+		$primaryKey = $this->buildPrimaryKey($instance, $classMetadata);
+
+		return md5(get_class($instance) . serialize($primaryKey));
 	}
 
 	/**
@@ -127,7 +143,7 @@ class Manager
 	 */
 	public function getRepository($entityName)
 	{
-		return new RepositoryManager($this, $this->createEntityAttributes($entityName));
+		return new RepositoryManager($this, $this->createClassMetadata($entityName));
 	}
 
 	/**
@@ -137,9 +153,12 @@ class Manager
 	 */
 	private function getInstanceFromManagedClasses($instance)
 	{
-		$classKey = spl_object_hash($instance);
-		if (!array_key_exists($classKey, $this->managedClasses)) {
-			throw new \RuntimeException('You try to get instance flag of class that is not managed');
+		$newItemClassKey = spl_object_hash($instance);
+		$classKey = $this->getEntityClassHashKey($instance);
+		if (!array_key_exists($newItemClassKey, $this->managedClasses)
+			&& !array_key_exists($classKey, $this->managedClasses)
+		) {
+			throw new \RuntimeException('You try to get instance of a class that is not managed');
 		}
 
 		return $this->managedClasses[$classKey];
@@ -154,7 +173,7 @@ class Manager
 	 */
 	private function processInstanceChanges($instance, $flag, $valueHash = NULL)
 	{
-		$entityAttributes = $this->createEntityAttributes($instance);
+		$entityAttributes = $this->createClassMetadata($instance);
 		switch ($flag) {
 			case self::FLAG_INSTANCE_INSERT :
 				return $this->insertItem($instance, $entityAttributes);
@@ -169,17 +188,18 @@ class Manager
 
 	/**
 	 * @param object $instance
-	 * @param ClassMetadata $entityAttributes
+	 * @param ClassMetadata $classMetadata
 	 * @return \DibiResult|int
 	 */
-	private function deleteItem($instance, ClassMetadata $entityAttributes)
+	private function deleteItem($instance, ClassMetadata $classMetadata)
 	{
 		$affectedRows = $this->dibiConnection
-			->delete($entityAttributes->getTable())
-			->where($this->buildPrimaryKey($instance, $entityAttributes))
+			->delete($classMetadata->getTable())
+			->where($this->buildPrimaryKey($instance, $classMetadata))
 			->execute(\dibi::AFFECTED_ROWS);
 
-		unset($this->managedClasses[spl_object_hash($instance)]);
+		$classKey = $this->getEntityClassHashKey($instance);
+		unset($this->managedClasses[$classKey]);
 
 		return $affectedRows;
 	}
@@ -202,7 +222,9 @@ class Manager
 			DataHelperLoader::setPropertyValue($instance, $entityAttributes->getAutoIncrementFieldName(), $insertId);
 		}
 
-		$classKey = spl_object_hash($instance);
+		// Unset origin class hash and set new one by primary key
+		unset($this->managedClasses[spl_object_hash($instance)]);
+		$classKey = $this->getEntityClassHashKey($instance, $entityAttributes);
 		$this->managedClasses[$classKey]['flag'] = self::FLAG_INSTANCE_UPDATE;
 		$this->managedClasses[$classKey]['valueHash'] = $this->getInstanceValuesHash($instance, $entityAttributes);
 
@@ -248,8 +270,12 @@ class Manager
 	 */
 	public function registerClass($instance, ClassMetadata $entityAttributes, $flag)
 	{
-		$primaryKey = $this->buildPrimaryKey($instance, $entityAttributes);
-		$hashedKey = md5(get_class($instance) . serialize($primaryKey));
+		if ($flag == self::FLAG_INSTANCE_INSERT) {
+			$hashedKey = spl_object_hash($instance);
+		} else {
+			$hashedKey = $this->getEntityClassHashKey($instance);
+		}
+
 		$this->managedClasses[$hashedKey] = array(
 			'instance' => $instance,
 			'valueHash' => $this->getInstanceValuesHash($instance, $entityAttributes),
@@ -294,7 +320,7 @@ class Manager
 	 * @param string|object $entityName Can be name of the class of instance itself
 	 * @return ClassMetadata
 	 */
-	public function createEntityAttributes($entityName)
+	public function createClassMetadata($entityName)
 	{
 		if (is_object($entityName)) {
 			$interfaces = class_implements($entityName);
@@ -308,9 +334,9 @@ class Manager
 		}
 
 		if ($this->cacheStorage) {
-			 return $this->cacheStorage->load($className, function() use ($className) {
+			return $this->cacheStorage->load($className, function () use ($className) {
 				return new ClassMetadata($className);
-			 });
+			});
 		}
 
 
@@ -357,7 +383,7 @@ class Manager
 			throw new \RuntimeException('Joining columns cannot be empty.');
 		}
 
-		$entityAttributes = $this->createEntityAttributes($proxy);
+		$entityAttributes = $this->createClassMetadata($proxy);
 		$data = $this->dibiConnection->select(array_keys($entityAttributes->getProperties()))
 			->from($entityAttributes->getTable())
 			->where($joiningColumns)
