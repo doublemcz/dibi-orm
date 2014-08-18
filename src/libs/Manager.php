@@ -51,7 +51,7 @@ class Manager
 		$args = func_get_args();
 		unset($args[0]);
 		if (count($entityAttributes->getPrimaryKey()) != count(array_values($args))) {
-			throw new \RuntimeException('You try to find an entity without full primary key. Did you forget to specify an another value as an argument?');
+			throw new \RuntimeException('You try to find and entity with full primary key. Did you forget to specify an another value as an argument?');
 		}
 
 		$primaryKey = array_combine($entityAttributes->getPrimaryKey(), array_values($args));
@@ -169,10 +169,10 @@ class Manager
 
 	/**
 	 * @param object $instance
-	 * @param EntityAttributes $entityAttributes
+	 * @param ClassMetadata $entityAttributes
 	 * @return \DibiResult|int
 	 */
-	private function deleteItem($instance, EntityAttributes $entityAttributes)
+	private function deleteItem($instance, ClassMetadata $entityAttributes)
 	{
 		$affectedRows = $this->dibiConnection
 			->delete($entityAttributes->getTable())
@@ -186,11 +186,11 @@ class Manager
 
 	/**
 	 * @param object $instance
-	 * @param EntityAttributes $entityAttributes
+	 * @param ClassMetadata $entityAttributes
 	 * @throws \RuntimeException
 	 * @return \DibiResult|int
 	 */
-	private function insertItem($instance, EntityAttributes $entityAttributes)
+	private function insertItem($instance, ClassMetadata $entityAttributes)
 	{
 		$values = $this->getInstanceValueMap($instance, $entityAttributes);
 		$insertId = $this->dibiConnection->insert($entityAttributes->getTable(), $values)->execute(\dibi::IDENTIFIER);
@@ -211,11 +211,11 @@ class Manager
 
 	/**
 	 * @param object $instance
-	 * @param EntityAttributes $entityAttributes
+	 * @param ClassMetadata $entityAttributes
 	 * @param string $originValueHash
 	 * @return bool
 	 */
-	private function updateItem($instance, EntityAttributes $entityAttributes, $originValueHash)
+	private function updateItem($instance, ClassMetadata $entityAttributes, $originValueHash)
 	{
 		if ($originValueHash == $this->getInstanceValuesHash($instance, $entityAttributes)) {
 			return FALSE;
@@ -228,10 +228,10 @@ class Manager
 
 	/**
 	 * @param object $instance
-	 * @param EntityAttributes $entityAttributes
+	 * @param ClassMetadata $entityAttributes
 	 * @return array
 	 */
-	private function getInstanceValueMap($instance, EntityAttributes $entityAttributes)
+	private function getInstanceValueMap($instance, ClassMetadata $entityAttributes)
 	{
 		$values = array();
 		foreach (array_keys($entityAttributes->getProperties()) as $propertyName) {
@@ -243,28 +243,26 @@ class Manager
 
 	/**
 	 * @param object $instance
-	 * @param EntityAttributes $entityAttributes
+	 * @param ClassMetadata $entityAttributes
 	 * @param int $flag
 	 */
-	public function registerClass($instance, EntityAttributes $entityAttributes, $flag)
+	public function registerClass($instance, ClassMetadata $entityAttributes, $flag)
 	{
 		$primaryKey = $this->buildPrimaryKey($instance, $entityAttributes);
 		$hashedKey = md5(get_class($instance) . serialize($primaryKey));
-		if (!in_array($hashedKey, $this->managedClasses)) {
-			$this->managedClasses[$hashedKey] = array(
-				'instance' => $instance,
-				'valueHash' => $this->getInstanceValuesHash($instance, $entityAttributes),
-				'flag' => $flag,
-			);
-		}
+		$this->managedClasses[$hashedKey] = array(
+			'instance' => $instance,
+			'valueHash' => $this->getInstanceValuesHash($instance, $entityAttributes),
+			'flag' => $flag,
+		);
 	}
 
 	/**
 	 * @param object $instance
-	 * @param EntityAttributes $entityAttributes
+	 * @param ClassMetadata $entityAttributes
 	 * @return string
 	 */
-	protected function getInstanceValuesHash($instance, EntityAttributes $entityAttributes)
+	protected function getInstanceValuesHash($instance, ClassMetadata $entityAttributes)
 	{
 		$values = array();
 		foreach (array_keys($entityAttributes->getProperties()) as $propertyName) {
@@ -276,10 +274,10 @@ class Manager
 
 	/**
 	 * @param object $instance
-	 * @param EntityAttributes $entityAttributes
+	 * @param ClassMetadata $entityAttributes
 	 * @return array
 	 */
-	protected function buildPrimaryKey($instance, EntityAttributes $entityAttributes)
+	protected function buildPrimaryKey($instance, ClassMetadata $entityAttributes)
 	{
 		$primaryKey = $entityAttributes->getPrimaryKey();
 		$values = array();
@@ -294,7 +292,7 @@ class Manager
 	 * Returns instance of EntityAttributes based on given argument
 	 *
 	 * @param string|object $entityName Can be name of the class of instance itself
-	 * @return EntityAttributes
+	 * @return ClassMetadata
 	 */
 	public function createEntityAttributes($entityName)
 	{
@@ -310,13 +308,13 @@ class Manager
 		}
 
 		if ($this->cacheStorage) {
-			return $this->cacheStorage->load($className, function () use ($className) {
-				return new EntityAttributes($className);
-			});
+			 return $this->cacheStorage->load($className, function() use ($className) {
+				return new ClassMetadata($className);
+			 });
 		}
 
 
-		return new EntityAttributes($className);
+		return new ClassMetadata($className);
 	}
 
 	public function createProxy($className)

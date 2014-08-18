@@ -14,20 +14,20 @@ class User {
 	 */
 	public $id;
 
-	/**
-	 * @oneToMany(entity="UserLog")
-	 * @join(column="id", referenceColumn="userId")
-	 * @staticJoin(column="type", value="error")
-	 * @var User
-	 */
-	protected $userLog;
-
-	/**
-	 * @oneToOne(entity="UserDetail")
-	 * @join(column="id", referenceColumn="userId")
-	 * @var UserDetail
-	 */
-	protected $detail;
+//	/**
+//	 * @oneToMany(entity="UserLog")
+//	 * @join(column="id", referenceColumn="userId")
+//	 * @staticJoin(column="type", value="error")
+//	 * @var User
+//	 */
+//	protected $userLog;
+//
+//	/**
+//	 * @oneToOne(entity="UserDetail")
+//	 * @join(column="id", referenceColumn="userId")
+//	 * @var UserDetail
+//	 */
+//	protected $detail;
 
 	/**
 	 * @column(type="string", length="50")

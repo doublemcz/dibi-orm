@@ -10,17 +10,17 @@ class ResultCollection implements \Iterator, \Countable, \ArrayAccess
 	protected $data = NULL;
 	/** @var int */
 	protected $position = 0;
-	/** @var EntityAttributes */
+	/** @var ClassMetadata */
 	protected $entityAttributes;
 	/** @var array */
 	protected $joinParameters;
 
 	/**
 	 * @param Manager $manager
-	 * @param EntityAttributes $entityAttributes
+	 * @param ClassMetadata $entityAttributes
 	 * @param array $joinParameters
 	 */
-	public function __construct(Manager $manager, EntityAttributes $entityAttributes, $joinParameters = array())
+	public function __construct(Manager $manager, ClassMetadata $entityAttributes, $joinParameters = array())
 	{
 		$this->manager = $manager;
 		$this->entityAttributes = $entityAttributes;

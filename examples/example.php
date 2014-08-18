@@ -1,14 +1,13 @@
 <?php
+require __DIR__ . '/composer/vendor/autoload.php';
+\Tracy\Debugger::enable();
+
 require __DIR__ . '/../src/dibiorm.php';
 require __DIR__ . '/User.php';
 require __DIR__ . '/UserLog.php';
 require __DIR__ . '/UserDetail.php';
-require __DIR__ . '/debug.php';
-require __DIR__ . '/composer/vendor/autoload.php';
 
-\Tracy\Debugger::enable();
-
-$storage = new Nette\Caching\Storages\FileStorage('temp');
+//$storage = new Nette\Caching\Storages\FileStorage('temp');
 $storage = new Nette\Caching\Storages\MemoryStorage();
 $cache = new Nette\Caching\Cache($storage);
 
@@ -19,7 +18,6 @@ $parameters = array(
 		'password' => '',
 		'database' => 'dibiorm',
 		'driver' => 'mysqli',
-		'profiler' => TRUE,
 	),
 	'entityNamespace' => 'Entities',
 	'proxiesPath' => __DIR__ . '/temp',
@@ -62,8 +60,6 @@ $entityManager = new \doublemcz\dibiorm\Manager($parameters, $cache);
 //dump($detail);
 
 /**** Speed test - loop over 10 000 records. ****/
-//for ($idx = 0; $idx < 1000; $idx++) {
-//	$user = $entityManager->find('User', 1);
-//}
-
-dump($entityManager);
+for ($idx = 1; $idx < 10000; $idx++) {
+	$user = $entityManager->find('User', $idx);
+}

@@ -2,7 +2,7 @@
 
 namespace doublemcz\dibiorm;
 
-class EntityAttributes
+class ClassMetadata
 {
 	/** @var string */
 	protected $className;
@@ -20,6 +20,8 @@ class EntityAttributes
 	protected $oneToMany = array();
 	/** @var array */
 	protected $oneToOne = array();
+	/** @var array */
+	protected $propertyReflections = array();
 
 	/**
 	 * @param string $className
@@ -63,6 +65,8 @@ class EntityAttributes
 		$reflection = new \ReflectionClass($entityName);
 		foreach ($reflection->getProperties() as $property) {
 			$propertyReflection = new \ReflectionProperty($reflection->getName(), $property->getName());
+			$this->propertyReflections[$property->getName()] = $propertyReflection;
+
 			$docLineParameters = $this->parseDoc($propertyReflection->getDocComment());
 			if (array_key_exists('column', $docLineParameters)) {
 				$this->columns[$property->getName()] = array();
@@ -234,5 +238,22 @@ class EntityAttributes
 	public function getRelationsOneToMany()
 	{
 		return $this->oneToMany;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function getPropertyReflections()
+	{
+		return $this->propertyReflections;
+	}
+
+	/**
+	 * @param string $propertyName
+	 * @return \ReflectionProperty
+	 */
+	public function getPropertyReflection($propertyName)
+	{
+		return $this->propertyReflections[$propertyName];
 	}
 }

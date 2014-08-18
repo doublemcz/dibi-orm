@@ -8,14 +8,14 @@ class RepositoryManager
 	protected $manager;
 	/** @var string */
 	protected $entityClassName;
-	/** @var EntityAttributes */
+	/** @var ClassMetadata */
 	protected $entityAttributes;
 
 	/**
 	 * @param Manager $manager
 	 * @param $entityAttributes
 	 */
-	public function __construct(Manager $manager, EntityAttributes $entityAttributes)
+	public function __construct(Manager $manager, ClassMetadata $entityAttributes)
 	{
 		$this->manager = $manager;
 		$this->entityAttributes = $entityAttributes;

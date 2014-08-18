@@ -6,11 +6,11 @@ class DataHelperLoader
 {
 	/**
 	 * @param Manager $manager
-	 * @param EntityAttributes $entityAttributes
+	 * @param ClassMetadata $entityAttributes
 	 * @param \DibiRow|FALSE $data
 	 * @return mixed|NULL
 	 */
-	public static function createFlatClass(Manager $manager, EntityAttributes $entityAttributes, $data)
+	public static function createFlatClass(Manager $manager, ClassMetadata $entityAttributes, $data)
 	{
 		if (empty($data)) {
 			return NULL;
@@ -27,16 +27,16 @@ class DataHelperLoader
 	 * @param Manager $manager
 	 * @param object $instance
 	 * @param \DibiRow $data
-	 * @param EntityAttributes $entityAttributes
+	 * @param ClassMetadata $entityAttributes
 	 */
-	public static function loadClass(Manager $manager, $instance, $data, EntityAttributes $entityAttributes)
+	public static function loadClass(Manager $manager, $instance, $data, ClassMetadata $entityAttributes)
 	{
 		foreach ($entityAttributes->getProperties() as $property => $columnAttributes) {
-			if (empty($data->$property)) {
+			if (!array_key_exists($property, $data)) {
 				continue;
 			}
 
-			self::setPropertyValue($instance, $property, $data->$property);
+			$entityAttributes->getPropertyReflection($property)->setValue($instance, $data[$property]);
 		}
 
 		self::handleRelations($manager, $instance, $entityAttributes);
@@ -45,19 +45,22 @@ class DataHelperLoader
 	/**
 	 * @param Manager $manager
 	 * @param object $instance
-	 * @param EntityAttributes $entityAttributes
+	 * @param ClassMetadata $entityAttributes
 	 */
-	public static function handleRelations($manager, $instance, EntityAttributes $entityAttributes)
+	public static function handleRelations($manager, $instance, ClassMetadata $entityAttributes)
 	{
 		foreach ($entityAttributes->getRelationsOneToMany() as $propertyName => $relation) {
 			$targetEntityAttributes = $manager->createEntityAttributes($relation['entity']);
-			self::setPropertyValue($instance, $propertyName, new ResultCollection($manager, $targetEntityAttributes));
+			$entityAttributes->getPropertyReflection($propertyName)
+				->setValue($instance, new ResultCollection($manager, $targetEntityAttributes));
 		}
 
 		foreach ($entityAttributes->getRelationsOneToOne() as $propertyName => $relation) {
 			$targetEntityAttributes = $manager->createEntityAttributes($relation['entity']);
 			$proxyClass = self::createProxyClass($manager, $targetEntityAttributes);
-			self::setPropertyValue($instance, $propertyName, $proxyClass);
+			$entityAttributes->getPropertyReflection($propertyName)
+				->setValue($instance, $proxyClass);
+
 			$joinMap = array();
 
 			$joinMap[$relation['join']['referenceColumn']] = self::getPropertyValue($instance, $relation['join']['column']);
@@ -71,9 +74,9 @@ class DataHelperLoader
 
 	/**
 	 * @param Manager $manager
-	 * @param EntityAttributes $targetEntityAttributes
+	 * @param ClassMetadata $targetEntityAttributes
 	 */
-	public static function createProxyClass(Manager $manager, EntityAttributes $targetEntityAttributes)
+	public static function createProxyClass(Manager $manager, ClassMetadata $targetEntityAttributes)
 	{
 		$proxyPath = sprintf(
 			'%s\%s.php',
@@ -91,7 +94,7 @@ class DataHelperLoader
 		return new $proxyClassName($manager, new $entityClassName());
 	}
 
-	public static function createProxyClassFile($proxyPath, EntityAttributes $targetEntityAttributes)
+	public static function createProxyClassFile($proxyPath, ClassMetadata $targetEntityAttributes)
 	{
 		$classReflection = new \ReflectionClass($targetEntityAttributes->getClassName());
 		$replaces = array(
@@ -115,13 +118,7 @@ class DataHelperLoader
 	public static function setPropertyValue($instance, $property, $value)
 	{
 		$reflection = new \ReflectionProperty($instance, $property);
-		if (!$reflection->isPublic()) {
-			$reflection->setAccessible(TRUE);
-			$reflection->setValue($instance, $value);
-			$reflection->setAccessible(FALSE);
-		} else {
-			$instance->{$property} = $value;
-		}
+		$reflection->setValue($instance, $value);
 	}
 
 	/**

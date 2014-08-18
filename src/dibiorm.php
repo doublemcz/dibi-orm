@@ -9,7 +9,7 @@
 
 require_once dirname(__FILE__) . '/libs/Manager.php';
 require_once dirname(__FILE__) . '/libs/QueryBuilder.php';
-require_once dirname(__FILE__) . '/libs/EntityAttributes.php';
+require_once dirname(__FILE__) . '/libs/ClassMetadata.php';
 require_once dirname(__FILE__) . '/libs/Exceptions.php';
 require_once dirname(__FILE__) . '/libs/DataHelperLoader.php';
 require_once dirname(__FILE__) . '/libs/RepositoryManager.php';
