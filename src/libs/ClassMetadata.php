@@ -1,6 +1,6 @@
 <?php
 
-namespace doublemcz\dibiorm;
+namespace Doublemcz\Dibiorm;
 
 class ClassMetadata
 {
@@ -22,6 +22,10 @@ class ClassMetadata
 	protected $oneToOne = array();
 	/** @var array */
 	protected $propertyReflections = array();
+	/** @var bool */
+	protected $hasBeforeCreateEvent = FALSE;
+	/** @var bool */
+	protected $hasBeforeUpdateEvent = FALSE;
 
 	/**
 	 * @param string $className
@@ -43,6 +47,7 @@ class ClassMetadata
 		$this->table = $tableAttributes['table']['name'];
 		$this->className = $className;
 		$this->findColumns($className);
+		$this->findEvents($className);
 		if (empty($this->columns)) {
 			throw new DocParsingException('You have to specify at least one column. Did you forget to specify @column in some class property? ', $className);
 		}
@@ -255,5 +260,30 @@ class ClassMetadata
 	public function getPropertyReflection($propertyName)
 	{
 		return $this->propertyReflections[$propertyName];
+	}
+
+	/**
+	 * @param string $className
+	 */
+	private function findEvents($className)
+	{
+		$this->hasBeforeCreateEvent = method_exists($className, "beforeCreateEvent");
+		$this->hasBeforeUpdateEvent = method_exists($className, "beforeUpdateEvent");
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function hasBeforeCreateEvent()
+	{
+		return $this->hasBeforeCreateEvent;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function hasBeforeUpdateEvent()
+	{
+		return $this->hasBeforeUpdateEvent;
 	}
 }

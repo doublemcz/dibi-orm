@@ -1,6 +1,6 @@
 <?php
 
-namespace doublemcz\dibiorm;
+namespace Doublemcz\Dibiorm;
 
 class DataHelperLoader
 {
@@ -51,16 +51,22 @@ class DataHelperLoader
 	{
 		foreach ($entityAttributes->getRelationsOneToMany() as $propertyName => $relation) {
 			$targetEntityAttributes = $manager->createClassMetadata($relation['entity']);
-			$entityAttributes->getPropertyReflection($propertyName)
-				->setValue($instance, new ResultCollection($manager, $targetEntityAttributes));
+			self::setPropertyValue(
+				$instance,
+				$propertyName,
+				new ResultCollection($manager, $targetEntityAttributes)
+			);
 		}
 
 		foreach ($entityAttributes->getRelationsOneToOne() as $propertyName => $relation) {
 			$targetEntityAttributes = $manager->createClassMetadata($relation['entity']);
 			$proxyClass = self::createProxyClass($manager, $targetEntityAttributes);
-			$entityAttributes->getPropertyReflection($propertyName)
-				->setValue($instance, $proxyClass);
-
+			self::setPropertyValue(
+				$instance,
+				$propertyName,
+				$proxyClass,
+				$targetEntityAttributes->getPropertyReflection($propertyName)
+			);
 			$joinMap = array();
 
 			$joinMap[$relation['join']['referenceColumn']] = self::getPropertyValue($instance, $relation['join']['column']);
@@ -114,11 +120,20 @@ class DataHelperLoader
 	 * @param object $instance
 	 * @param string $property
 	 * @param mixed $value
+	 * @param \ReflectionProperty $propertyReflection
 	 */
-	public static function setPropertyValue($instance, $property, $value)
+	public static function setPropertyValue($instance, $property, $value, \ReflectionProperty $propertyReflection = NULL)
 	{
-		$reflection = new \ReflectionProperty($instance, $property);
-		$reflection->setValue($instance, $value);
+		if (!$propertyReflection)
+			$propertyReflection = new \ReflectionProperty($instance, $property);
+
+		if (!$propertyReflection->isPublic()) {
+			$propertyReflection->setAccessible(true);
+			$propertyReflection->setValue($instance, $value);
+			$propertyReflection->setAccessible(false);
+		} else {
+			$propertyReflection->setValue($instance, $value);
+		}
 	}
 
 	/**

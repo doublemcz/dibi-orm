@@ -1,11 +1,11 @@
 <?php
-require __DIR__ . '/composer/vendor/autoload.php';
+require __DIR__ . '/vendor/autoload.php';
 \Tracy\Debugger::enable();
 
 require __DIR__ . '/../src/dibiorm.php';
-require __DIR__ . '/User.php';
-require __DIR__ . '/UserLog.php';
-require __DIR__ . '/UserDetail.php';
+require __DIR__ . '/Entities/User.php';
+require __DIR__ . '/Entities/UserLog.php';
+require __DIR__ . '/Entities/UserDetail.php';
 
 //$storage = new Nette\Caching\Storages\FileStorage('temp');
 $storage = new Nette\Caching\Storages\MemoryStorage();
@@ -28,18 +28,15 @@ $entityManager = new \doublemcz\dibiorm\Manager($parameters, $cache);
 /**** ADD NEW USER **/
 //$user = new \Entities\User();
 //$user->fullname = 'Test';
-//$user->createdAt = '2014-01-01 00:01:01';
-//$user->birthDate = '2014-01-01';
+//$user->birthDate = new DateTime('1988-08-03 15:00');
 //$entityManager->persist($user);
 //$entityManager->flush();
 
-
 /**** FIND USER AND CHANGE HIM ****/
-///** @var \Entities\User $user */
-//$user = $entityManager->find('User', 1);
-//$user->fullname = 'Test';
-//$entityManager->flush();
-
+/** @var \Entities\User $user */
+$user = $entityManager->find('User', 1);
+$user->fullname = 'Test';
+$entityManager->flush();
 
 /**** FIND USERS **/
 //$users = $entityManager->getRepository('User')->findBy();
@@ -51,17 +48,19 @@ $entityManager = new \doublemcz\dibiorm\Manager($parameters, $cache);
 //$user = $entityManager->find('User', 1);
 //$userLog = $user->getUserLog();
 //dump($userLog);
+//dump($userLog[0]);
 
 
 /*** ONE TO ONE RELATION **/
 /** @var \Entities\User $user */
 //$user = $entityManager->find('User', 1);
 //$detail = $user->getDetail();
-//dump($detail);
+//dump($detail->note);
 
-/**** Speed test - loop over 10 000 records. ****/
-for ($idx = 1; $idx < 1000; $idx++) {
-	$user = $entityManager->find('User', $idx);
-}
+///**** Speed test - loop over 1 000 records. ****/
+//for ($idx = 1; $idx < 1000; $idx++) {
+//	$user = $entityManager->find('User', $idx);
+//}
 
 //dump($entityManager);
+echo "done";
