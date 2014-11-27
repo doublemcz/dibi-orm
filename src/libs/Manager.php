@@ -364,6 +364,8 @@ class Manager
 			$className = $this->getEntityClassName($entityName);
 		}
 
+		// TODO add memory storage for code run
+
 		if ($this->cacheStorage) {
 			return $this->cacheStorage->load($className, function () use ($className) {
 				return new ClassMetadata($className);

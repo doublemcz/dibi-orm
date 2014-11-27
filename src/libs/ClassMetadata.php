@@ -69,7 +69,7 @@ class ClassMetadata
 	{
 		$reflection = new \ReflectionClass($entityName);
 		foreach ($reflection->getProperties() as $property) {
-			$propertyReflection = new \ReflectionProperty($reflection->getName(), $property->getName());
+			$propertyReflection = new \ReflectionProperty($entityName, $property->getName());
 			$this->propertyReflections[$property->getName()] = $propertyReflection;
 
 			$docLineParameters = $this->parseDoc($propertyReflection->getDocComment());

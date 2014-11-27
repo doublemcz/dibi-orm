@@ -1,5 +1,6 @@
 <?php
 require __DIR__ . '/vendor/autoload.php';
+\Tracy\Debugger::$strictMode = TRUE;
 \Tracy\Debugger::enable();
 
 require __DIR__ . '/../src/dibiorm.php';
@@ -7,7 +8,7 @@ require __DIR__ . '/Entities/User.php';
 require __DIR__ . '/Entities/UserLog.php';
 require __DIR__ . '/Entities/UserDetail.php';
 
-//$storage = new Nette\Caching\Storages\FileStorage('temp');
+$storage = new Nette\Caching\Storages\FileStorage('temp');
 $storage = new Nette\Caching\Storages\MemoryStorage();
 $cache = new Nette\Caching\Cache($storage);
 
@@ -34,9 +35,9 @@ $entityManager = new \doublemcz\dibiorm\Manager($parameters, $cache);
 
 /**** FIND USER AND CHANGE HIM ****/
 /** @var \Entities\User $user */
-$user = $entityManager->find('User', 1);
-$user->fullname = 'Test';
-$entityManager->flush();
+//$user = $entityManager->find('User', 1);
+//$user->fullname = 'Test';
+//$entityManager->flush();
 
 /**** FIND USERS **/
 //$users = $entityManager->getRepository('User')->findBy();
@@ -57,10 +58,9 @@ $entityManager->flush();
 //$detail = $user->getDetail();
 //dump($detail->note);
 
-///**** Speed test - loop over 1 000 records. ****/
-//for ($idx = 1; $idx < 1000; $idx++) {
-//	$user = $entityManager->find('User', $idx);
-//}
-
+/**** Speed test - loop over 1 000 records. ****/
+for ($idx = 1; $idx < 1000; $idx++) {
+	$user = $entityManager->find('User', $idx);
+}
 //dump($entityManager);
 echo "done";

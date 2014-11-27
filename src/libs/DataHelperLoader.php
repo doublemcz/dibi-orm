@@ -36,7 +36,7 @@ class DataHelperLoader
 				continue;
 			}
 
-			$entityAttributes->getPropertyReflection($property)->setValue($instance, $data[$property]);
+			self::setPropertyValue($instance, $property, $data[$property]);
 		}
 
 		self::handleRelations($manager, $instance, $entityAttributes);
@@ -65,7 +65,7 @@ class DataHelperLoader
 				$instance,
 				$propertyName,
 				$proxyClass,
-				$targetEntityAttributes->getPropertyReflection($propertyName)
+				$entityAttributes->getPropertyReflection($propertyName)
 			);
 			$joinMap = array();
 
@@ -120,12 +120,11 @@ class DataHelperLoader
 	 * @param object $instance
 	 * @param string $property
 	 * @param mixed $value
-	 * @param \ReflectionProperty $propertyReflection
 	 */
-	public static function setPropertyValue($instance, $property, $value, \ReflectionProperty $propertyReflection = NULL)
+	public static function setPropertyValue($instance, $property, $value)
 	{
-		if (!$propertyReflection)
-			$propertyReflection = new \ReflectionProperty($instance, $property);
+		// TODO solve the bug when I get reflection from cache (one to one relation)
+		$propertyReflection = new \ReflectionProperty(get_class($instance), $property);
 
 		if (!$propertyReflection->isPublic()) {
 			$propertyReflection->setAccessible(true);
@@ -143,7 +142,7 @@ class DataHelperLoader
 	 */
 	public static function getPropertyValue($instance, $propertyName)
 	{
-		$reflection = new \ReflectionProperty($instance, $propertyName);
+		$reflection = new \ReflectionProperty(get_class($instance), $propertyName);
 		if (!$reflection->isPublic()) {
 			$reflection->setAccessible(TRUE);
 			$value = $reflection->getValue($instance);
