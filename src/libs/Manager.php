@@ -51,7 +51,7 @@ class Manager
 		$args = func_get_args();
 		unset($args[0]);
 		if (count($entityAttributes->getPrimaryKey()) != count(array_values($args))) {
-			throw new \RuntimeException('You try to find and entity with full primary key. Did you forget to specify an another value as an argument?');
+			throw new \RuntimeException('You are trying to find and entity with full primary key. Did you forget to specify an another value as an argument?');
 		}
 
 		$primaryKey = array_combine($entityAttributes->getPrimaryKey(), array_values($args));
@@ -126,9 +126,7 @@ class Manager
 			$this->processInstanceChanges(
 				$instance,
 				$classContainer['flag'],
-				!empty($classContainer['valueHash'])
-					? $classContainer['valueHash']
-					: NULL
+				!empty($classContainer['valueHash']) ? $classContainer['valueHash'] : NULL
 			);
 		} else {
 			foreach ($this->managedClasses as $class) {
@@ -182,7 +180,7 @@ class Manager
 			case self::FLAG_INSTANCE_UPDATE :
 				return $this->updateItem($instance, $entityAttributes, $valueHash);
 			default:
-				throw new \RuntimeException(sprintf('Unknown flag action. Given %s' . $flag ? : ' NULL'));
+				throw new \RuntimeException(sprintf('Unknown flag action. Given %s' . $flag ?: ' NULL'));
 		}
 	}
 
@@ -212,6 +210,10 @@ class Manager
 	 */
 	private function insertItem($instance, ClassMetadata $entityAttributes)
 	{
+		if ($entityAttributes->hasBeforeCreateEvent()) {
+			$instance->beforeCreateEvent($this);
+		}
+
 		$values = $this->getInstanceValueMap($instance, $entityAttributes);
 		$insertId = $this->dibiConnection->insert($entityAttributes->getTable(), $values)->execute(\dibi::IDENTIFIER);
 		if ($entityAttributes->getAutoIncrementFieldName()) {
@@ -223,8 +225,13 @@ class Manager
 		}
 
 		// Unset origin class hash and set new one by primary key
-		unset($this->managedClasses[spl_object_hash($instance)]);
+		$hash = spl_object_hash($instance);
+		if (array_key_exists($hash, $this->managedClasses)) {
+			unset($this->managedClasses[$hash]);
+		}
+
 		$classKey = $this->getEntityClassHashKey($instance, $entityAttributes);
+		$this->managedClasses[$classKey]['instance'] = $instance;
 		$this->managedClasses[$classKey]['flag'] = self::FLAG_INSTANCE_UPDATE;
 		$this->managedClasses[$classKey]['valueHash'] = $this->getInstanceValuesHash($instance, $entityAttributes);
 
@@ -243,6 +250,10 @@ class Manager
 			return FALSE;
 		}
 
+		if ($entityAttributes->hasBeforeUpdateEvent()) {
+			$instance->beforeUpdateEvent($this);
+		}
+
 		$values = $this->getInstanceValueMap($instance, $entityAttributes);
 
 		return $this->dibiConnection->update($entityAttributes->getTable(), $values)->where($this->buildPrimaryKey($instance, $entityAttributes))->execute(\dibi::AFFECTED_ROWS) == 1;
@@ -257,10 +268,29 @@ class Manager
 	{
 		$values = array();
 		foreach (array_keys($entityAttributes->getProperties()) as $propertyName) {
-			$values[$propertyName] = (string)DataHelperLoader::getPropertyValue($instance, $propertyName);
+			$value = DataHelperLoader::getPropertyValue($instance, $propertyName);
+			$values[$propertyName] = $this->translateValue($value);;
 		}
 
 		return $values;
+	}
+
+	/**
+	 * @param mixed $value
+	 * @return mixed
+	 */
+	private function translateValue($value)
+	{
+		if (is_object($value)) {
+			if (get_class($value) == "DateTime" || is_subclass_of($value, 'DateTime')) {
+				$value = $value->format('Y-m-d H:i:s');
+			} else {
+				// Try to translate into string
+				$value = (string)$value;
+			}
+		}
+
+		return $value;
 	}
 
 	/**
@@ -292,7 +322,8 @@ class Manager
 	{
 		$values = array();
 		foreach (array_keys($entityAttributes->getProperties()) as $propertyName) {
-			$values[] = (string)DataHelperLoader::getPropertyValue($instance, $propertyName);
+			$value = DataHelperLoader::getPropertyValue($instance, $propertyName);
+			$values[] = $this->translateValue($value);
 		}
 
 		return md5(serialize($values));
@@ -332,6 +363,8 @@ class Manager
 		} else {
 			$className = $this->getEntityClassName($entityName);
 		}
+
+		// TODO add memory storage for code run
 
 		if ($this->cacheStorage) {
 			return $this->cacheStorage->load($className, function () use ($className) {

@@ -1,6 +1,6 @@
 <?php
 
-namespace doublemcz\dibiorm;
+namespace Doublemcz\Dibiorm;
 
 class DataHelperLoader
 {
@@ -36,7 +36,7 @@ class DataHelperLoader
 				continue;
 			}
 
-			$entityAttributes->getPropertyReflection($property)->setValue($instance, $data[$property]);
+			self::setPropertyValue($instance, $property, $data[$property]);
 		}
 
 		self::handleRelations($manager, $instance, $entityAttributes);
@@ -51,16 +51,22 @@ class DataHelperLoader
 	{
 		foreach ($entityAttributes->getRelationsOneToMany() as $propertyName => $relation) {
 			$targetEntityAttributes = $manager->createClassMetadata($relation['entity']);
-			$entityAttributes->getPropertyReflection($propertyName)
-				->setValue($instance, new ResultCollection($manager, $targetEntityAttributes));
+			self::setPropertyValue(
+				$instance,
+				$propertyName,
+				new ResultCollection($manager, $targetEntityAttributes)
+			);
 		}
 
 		foreach ($entityAttributes->getRelationsOneToOne() as $propertyName => $relation) {
 			$targetEntityAttributes = $manager->createClassMetadata($relation['entity']);
 			$proxyClass = self::createProxyClass($manager, $targetEntityAttributes);
-			$entityAttributes->getPropertyReflection($propertyName)
-				->setValue($instance, $proxyClass);
-
+			self::setPropertyValue(
+				$instance,
+				$propertyName,
+				$proxyClass,
+				$entityAttributes->getPropertyReflection($propertyName)
+			);
 			$joinMap = array();
 
 			$joinMap[$relation['join']['referenceColumn']] = self::getPropertyValue($instance, $relation['join']['column']);
@@ -117,8 +123,16 @@ class DataHelperLoader
 	 */
 	public static function setPropertyValue($instance, $property, $value)
 	{
-		$reflection = new \ReflectionProperty($instance, $property);
-		$reflection->setValue($instance, $value);
+		// TODO solve the bug when I get reflection from cache (one to one relation)
+		$propertyReflection = new \ReflectionProperty(get_class($instance), $property);
+
+		if (!$propertyReflection->isPublic()) {
+			$propertyReflection->setAccessible(true);
+			$propertyReflection->setValue($instance, $value);
+			$propertyReflection->setAccessible(false);
+		} else {
+			$propertyReflection->setValue($instance, $value);
+		}
 	}
 
 	/**
@@ -128,7 +142,7 @@ class DataHelperLoader
 	 */
 	public static function getPropertyValue($instance, $propertyName)
 	{
-		$reflection = new \ReflectionProperty($instance, $propertyName);
+		$reflection = new \ReflectionProperty(get_class($instance), $propertyName);
 		if (!$reflection->isPublic()) {
 			$reflection->setAccessible(TRUE);
 			$value = $reflection->getValue($instance);
