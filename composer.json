@@ -2,7 +2,7 @@
 	"name": "doublemcz/dibiorm",
 	"description": "ORM system based on dibi",
 	"minimum-stability": "dev",
-	"license": "proprietary",
+	"license": ["BSD-3-Clause", "GPL-2.0", "GPL-3.0"],
 	"authors": [
 		{
 			"name": "Martin Míka",
