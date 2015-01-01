@@ -2,6 +2,9 @@
 
 namespace doublemcz\dibiorm;
 
+use Nette\Caching\Cache;
+use Nette\Caching\IStorage;
+
 class Manager
 {
 	const FLAG_INSTANCE_INSERT = 1;
@@ -16,10 +19,10 @@ class Manager
 	protected $managedClasses = array();
 	/** @var string */
 	protected $proxiesPath;
-	/** @var object */
-	protected $cacheStorage;
+	/** @var Cache */
+	protected $cache;
 
-	public function __construct($parameters, $cacheStorage)
+	public function __construct($parameters, IStorage $cacheStorage)
 	{
 		if ($parameters['database'] instanceof \DibiConnection) {
 			$this->dibiConnection = $parameters['database'];
@@ -40,7 +43,7 @@ class Manager
 		}
 
 		$this->autoLoadProxies();
-		$this->cacheStorage = $cacheStorage;
+		$this->cache = new Cache($cacheStorage);
 	}
 
 	/**
@@ -373,12 +376,11 @@ class Manager
 
 		// TODO add memory storage for code run
 
-		if ($this->cacheStorage) {
-			return $this->cacheStorage->load($className, function () use ($className) {
+		if ($this->cache) {
+			return $this->cache->load($className, function () use ($className) {
 				return new ClassMetadata($className);
 			});
 		}
-
 
 		return new ClassMetadata($className);
 	}
