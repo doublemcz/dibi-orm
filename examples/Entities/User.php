@@ -1,6 +1,6 @@
 <?php
 
-namespace Entities;
+namespace doublemcz\dibiorm\Examples\Entities;
 use doublemcz\dibiorm\Manager;
 
 /**

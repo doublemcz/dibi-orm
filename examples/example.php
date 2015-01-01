@@ -20,24 +20,24 @@ $parameters = array(
 		'database' => 'dibiorm',
 		'driver' => 'mysqli',
 	),
-	'entityNamespace' => 'Entities',
+	'entityNamespace' => 'doublemcz\dibiorm\Examples\Entities',
 	'proxiesPath' => __DIR__ . '/temp',
 );
 
 $entityManager = new \doublemcz\dibiorm\Manager($parameters, $cache);
 
 /**** ADD NEW USER **/
-//$user = new \Entities\User();
-//$user->fullname = 'Test';
-//$user->birthDate = new DateTime('1988-08-03 15:00');
-//$entityManager->persist($user);
-//$entityManager->flush();
+$user = new \doublemcz\dibiorm\Examples\Entities\User();
+$user->fullname = 'Test';
+$user->birthDate = new DateTime('1988-08-03 15:00');
+$entityManager->persist($user);
+$entityManager->flush();
 
 /**** FIND USER AND CHANGE HIM ****/
-/** @var \Entities\User $user */
-//$user = $entityManager->find('User', 1);
-//$user->fullname = 'Test';
-//$entityManager->flush();
+/** @var \doublemcz\dibiorm\Examples\Entities\User $user */
+$user = $entityManager->find('User', 1);
+$user->fullname = 'Test';
+$entityManager->flush();
 
 /**** FIND USERS **/
 //$users = $entityManager->getRepository('User')->findBy();
@@ -45,7 +45,7 @@ $entityManager = new \doublemcz\dibiorm\Manager($parameters, $cache);
 
 
 /*** ONE TO MANY RELATION **/
-/** @var \Entities\User $user */
+/** @var \doublemcz\dibiorm\Examples\Entities\User $user */
 //$user = $entityManager->find('User', 1);
 //$userLog = $user->getUserLog();
 //dump($userLog);
@@ -53,7 +53,7 @@ $entityManager = new \doublemcz\dibiorm\Manager($parameters, $cache);
 
 
 /*** ONE TO ONE RELATION **/
-/** @var \Entities\User $user */
+/** @var \doublemcz\dibiorm\Examples\Entities\User $user */
 //$user = $entityManager->find('User', 1);
 //$detail = $user->getDetail();
 //dump($detail->note);
