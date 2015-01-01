@@ -21,8 +21,15 @@ class Manager
 
 	public function __construct($parameters, $cacheStorage)
 	{
-		$this->dibiConnection = new \DibiConnection($parameters['database']);
-		if (empty($parameters['proxiesPath']) || !is_dir($parameters['proxiesPath'])) {
+		if ($parameters['database'] instanceof \DibiConnection) {
+			$this->dibiConnection = $parameters['database'];
+		} elseif (is_array($parameters['database'])) {
+			$this->dibiConnection = new \DibiConnection($parameters['database']);
+		} else {
+			throw new \InvalidArgumentException('You must pass a DibiConnection or array with db parameters in "database" parameter.');
+		}
+
+		if (empty($parameters['proxiesPath']) || (!is_dir($parameters['proxiesPath']) && !mkdir($parameters['proxiesPath'], 0777, TRUE))) {
 			throw new MissingArgumentException('You have to set valid proxy path. It\'s parameter proxiesPath');
 		} else {
 			$this->proxiesPath = $parameters['proxiesPath'];
