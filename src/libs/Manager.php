@@ -78,6 +78,32 @@ class Manager
 		return $instance;
 	}
 
+
+	/**
+	 * Finds an entity by given array
+	 *
+	 * @param string $entityName
+	 * @param array $where
+	 * @throws \RuntimeException
+	 * @return mixed
+	 */
+	public function findOneBy($entityName, $where = array())
+	{
+		$this->handleConnection();
+		$entityAttributes = $this->createClassMetadata($entityName);
+		$data = $this->dibiConnection->select(array_keys($entityAttributes->getProperties()))
+			->from($entityAttributes->getTable())
+			->where($where)
+			->fetch();
+
+		$instance = DataHelperLoader::CreateFlatClass($this, $entityAttributes, $data);
+		if ($instance) {
+			$this->registerClass($instance, $entityAttributes, self::FLAG_INSTANCE_UPDATE);
+		}
+
+		return $instance;
+	}
+
 	/**
 	 * @param object $entity
 	 * @throws \RuntimeException

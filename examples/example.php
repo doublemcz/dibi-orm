@@ -10,7 +10,6 @@ require __DIR__ . '/Entities/UserDetail.php';
 
 $storage = new Nette\Caching\Storages\FileStorage('temp');
 $storage = new Nette\Caching\Storages\MemoryStorage();
-$cache = new Nette\Caching\Cache($storage);
 
 $parameters = array(
 	'database' => array(
@@ -24,20 +23,24 @@ $parameters = array(
 	'proxiesPath' => __DIR__ . '/temp',
 );
 
-$entityManager = new \doublemcz\dibiorm\Manager($parameters, $cache);
+$entityManager = new \doublemcz\dibiorm\Manager($parameters, $storage);
 
 /**** ADD NEW USER **/
-$user = new \doublemcz\dibiorm\Examples\Entities\User();
-$user->fullname = 'Test';
-$user->birthDate = new DateTime('1988-08-03 15:00');
-$entityManager->persist($user);
-$entityManager->flush();
+//$user = new \doublemcz\dibiorm\Examples\Entities\User();
+//$user->fullname = 'Test';
+//$user->birthDate = new DateTime('1988-08-03 15:00');
+//$entityManager->persist($user);
+//$entityManager->flush();
 
 /**** FIND USER AND CHANGE HIM ****/
 /** @var \doublemcz\dibiorm\Examples\Entities\User $user */
-$user = $entityManager->find('User', 1);
-$user->fullname = 'Test';
-$entityManager->flush();
+//$user = $entityManager->find('User', 1);
+//$user->fullname = 'Test';
+//$entityManager->flush();
+
+/**** FIND ONE BY ***/
+//$user = $entityManager->findOneBy('User', array('fullname' => 'test'));
+//dump($user);
 
 /**** FIND USERS **/
 //$users = $entityManager->getRepository('User')->findBy();
@@ -59,8 +62,10 @@ $entityManager->flush();
 //dump($detail->note);
 
 /**** Speed test - loop over 1 000 records. ****/
-for ($idx = 1; $idx < 1000; $idx++) {
-	$user = $entityManager->find('User', $idx);
-}
+//for ($idx = 1; $idx < 1000; $idx++) {
+//	$user = $entityManager->find('User', $idx);
+//}
 //dump($entityManager);
+
+
 echo "done";
