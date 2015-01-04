@@ -2,8 +2,8 @@
 
 namespace doublemcz\dibiorm;
 
+use Nette;
 use Nette\Caching\Cache;
-use Nette\Caching\IStorage;
 
 class Manager
 {
@@ -22,7 +22,7 @@ class Manager
 	/** @var Cache */
 	protected $cache;
 
-	public function __construct($parameters, IStorage $cacheStorage)
+	public function __construct($parameters)
 	{
 		if ($parameters['database'] instanceof \DibiConnection) {
 			$this->dibiConnection = $parameters['database'];
@@ -42,8 +42,14 @@ class Manager
 			$this->entityNamespace = $parameters['entityNamespace'];
 		}
 
+		if (!empty($parameters['cacheStorage'])) {
+			$this->cache = new Cache($parameters['cacheStorage']);
+		} else {
+			$this->cache = new Cache(new Nette\Caching\Storages\DevNullStorage());
+		}
+
 		$this->autoLoadProxies();
-		$this->cache = new Cache($cacheStorage);
+
 	}
 
 	/**

@@ -21,16 +21,17 @@ $parameters = array(
 	),
 	'entityNamespace' => 'doublemcz\dibiorm\Examples\Entities',
 	'proxiesPath' => __DIR__ . '/temp',
+	'storage' => $storage,
 );
 
-$entityManager = new \doublemcz\dibiorm\Manager($parameters, $storage);
+$entityManager = new \doublemcz\dibiorm\Manager($parameters);
 
 /**** ADD NEW USER **/
-//$user = new \doublemcz\dibiorm\Examples\Entities\User();
-//$user->fullname = 'Test';
-//$user->birthDate = new DateTime('1988-08-03 15:00');
-//$entityManager->persist($user);
-//$entityManager->flush();
+$user = new \doublemcz\dibiorm\Examples\Entities\User();
+$user->fullname = 'Test';
+$user->birthDate = new DateTime('1988-08-03 15:00');
+$entityManager->persist($user);
+$entityManager->flush();
 
 /**** FIND USER AND CHANGE HIM ****/
 /** @var \doublemcz\dibiorm\Examples\Entities\User $user */
