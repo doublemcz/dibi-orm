@@ -3,8 +3,7 @@
 Dibi ORM is lightweight ORM solution based on Dibi. Works closely with Nette Framework. 
 ORM logic comes from Doctrine 2 but is very simplified. Focus is also on performance.
 
-Installation
-------------
+### Installation
 I recommend you to install via Composer.
 
 ```
@@ -16,8 +15,7 @@ If you do not have Composer, download latest version from GitHub and require boo
 require 'src/dibirom.php'
 ```
 
-Initialization
---------------
+### Initialization
 ```php
 $parameters = array(
 	'database' => array(
