@@ -33,7 +33,7 @@ $parameters = array(
 $databaseManager = new \doublemcz\dibiorm\Manager($parameters);
 ```
 
-#### Usage in Nette
+##### Usage in Nette
 
 Put this section into services.neon
 
@@ -63,9 +63,11 @@ parameters:
 		database: @dibiConnection
 ```
 
+
 ### Data handling
 
-#### Get an Entity by ID
+
+##### Get an Entity by ID
 Find a user with ID = 1
 ```php
 $databaseManager->find('User', 1);
@@ -76,13 +78,14 @@ If user has more columns in primary key, you can pass it in order you defined th
 $user = $databaseManager->find('AnEntityName', 'foo', 'bar');
 ```
 
-#### Find an Entity by propety
+##### Find an Entity by propety
 We can find an Entity by property e-mail
 ```php
 $user = $databaseManager->findOneBy('User', array('email' => 'email@domain.com'));
 ```
 
-#### Get entities in table
+
+##### Get entities in table
 Find all users in table 'users'
 ```php
 $users = $databaseManager->findBy('User');
@@ -92,7 +95,8 @@ You can filter by where
 $users = $databaseManager->findBy('User', array('role' => 'admin'));
 ```
 
-#### Insert entity to database
+
+##### Insert entity to database
 ```php
 $user = new User();
 $user->name = 'Martin';
@@ -100,11 +104,168 @@ $databaseManager->persist($user);
 $databaseManager->flush();
 ```
 
-#### Update entity
+
+##### Update entity
 When you load an entity from repository then the entity is automatically managed by Manager. It means that if you make a change and flush changes over Manager a SQL query is automatically executed.
 
 ```
 $user = $database->find('User', 1);
 $user->note = 'An updated note on user 1';
 $databaseManager->flush();
+```
+
+
+### Entity Settings
+All settings are defined by PhpDoc. Every entity must have @table tag to specify the source table defined on class PhpDoc.
+Every class property that has relation to database column must have tag @column.
+
+##### Defining primary column
+Every entity must have primary key. The definition is composed by @primaryKey and @column. If you want set id that was generated from database on create sql query then specify @autoIncrement tag.
+
+##### Relations
+At this moment you can specify @oneToOne and @oneToMany relation. Both need a join specification tag defined as follow:
+@join(column="id", referenceColumn="userId"). It says that it is joing column User.id to RelatedTable.userId column.
+
+###### Real example:
+```php
+/**
+ * @table (name="users")
+ */
+class User {
+	/**
+	 * @oneToMany(entity="UserLog")
+	 * @join(column="id", referenceColumn="userId")
+	 * @var User
+	 */
+	protected $userLog;
+	
+	/**
+	 * @return UserLog[]
+	 */
+	public function getUserLog()
+	{
+		return  $this->userLog;
+	}
+}
+```
+
+###### Static join parameter
+It is also possible to specify static join parameter to filter table by column. Here you can see static join that defines user.type = 'error'
+```php
+/**
+ * @table (name="users")
+ */
+class User {
+	/**
+	 * @oneToMany(entity="UserLog")
+	 * @join(column="id", referenceColumn="userId")
+	 * @staticJoin(column="type", value="error")
+	 * @var User
+	 */
+	protected $errorLog;
+	
+	/**
+	 * @return UserLog[]
+	 */
+	public function getErrorLog()
+	{
+		return  $this->errorLog;
+	}
+}
+```
+
+##### Example of User entity definition
+```php
+<?php
+
+namespace doublemcz\dibiorm\Examples\Entities;
+use doublemcz\dibiorm\Manager;
+
+/**
+ * @table (name="users")
+ */
+class User {
+	/**
+	 * @primaryKey
+	 * @autoIncrement
+	 * @column
+	 * @var int
+	 */
+	public $id;
+	
+	/**
+	 * @oneToMany(entity="UserLog")
+	 * @join(column="id", referenceColumn="userId")
+	 * @var User
+	 */
+	protected $userLog;
+		
+	/**
+	 * @oneToMany(entity="UserLog")
+	 * @join(column="id", referenceColumn="userId")
+	 * @staticJoin(column="type", value="error")
+	 * @var User
+	 */
+	protected $userErrorLog;
+	
+	/**
+	 * @oneToOne(entity="UserDetail")
+	 * @join(column="id", referenceColumn="userId")
+	 * @var UserDetail
+	 */
+	protected $detail;
+	
+	/**
+	 * @column
+	 * @var string
+	 */
+	public $fullname;
+	
+	/**
+	 * @column
+	 * @var \DateTime
+	 */
+	public $birthDate;
+	
+	/**
+	 * @column
+	 * @var \DateTime
+	 */
+	public $createdAt;
+	
+	/**
+	 * @column
+	 * @var \DateTime
+	 */
+	public $updatedAt;
+	
+	/**
+	 * @return UserLog[]
+	 */
+	public function getUserLog()
+	{
+		return $this->userLog;
+	}
+	
+	/**
+	 * @return UserDetail
+	 */
+	public function getDetail()
+	{
+		return $this->detail;
+	}
+	
+	/**
+	 * @param Manager $manager
+	 */
+	public function beforeCreateEvent(Manager $manager)
+	{
+		$this->createdAt = new \DateTime();
+	}
+	
+	public function beforeUpdateEvent(Manager $manager)
+	{
+		$this->updatedAt = new \DateTime();
+	}
+}
 ```
