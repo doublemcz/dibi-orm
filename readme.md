@@ -101,7 +101,7 @@ $databaseManager->flush();
 ```
 
 #### Update entity
-When you load an entity from repository then the entity is automatically managed by Manager. It means that if you make a change and flush changes over Manager a SQL query is automatically execute.
+When you load an entity from repository then the entity is automatically managed by Manager. It means that if you make a change and flush changes over Manager a SQL query is automatically executed.
 
 ```
 $user = $database->find('User', 1);
