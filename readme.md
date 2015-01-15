@@ -27,7 +27,7 @@ $parameters = array(
 	),
 	'entityNamespace' => 'App\Entities',
 	'proxiesPath' => __DIR__ . '/temp',
-	'storage' => new Nette\Caching\Storages\FileStorage('temp');,
+	'storage' => new Nette\Caching\Storages\FileStorage('temp'),
 );
 
 $databaseManager = new \doublemcz\dibiorm\Manager($parameters);
