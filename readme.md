@@ -176,8 +176,8 @@ class User {
 
 ### Events
 Manager has event handling based on methods included in the Class. We have Entity events at this moment:
- - onCreate
- - onUpdate
+ - beforeCreateEvent
+ - beforeUpdateEvent
 
 #### Examples of event usage. 
 There you can see how we can update an entity **before** create or update sql is executed.
