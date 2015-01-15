@@ -83,8 +83,9 @@ $user = $databaseManager->findOneBy('User', array('email' => 'email@domain.com')
 ```
 
 #### Get entities in table
+Find all users in table 'users'
 ```php
-$user = $databaseManager->findBy('User');
+$users = $databaseManager->findBy('User');
 ```
 You can filter by where
 ```
