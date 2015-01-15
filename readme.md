@@ -174,7 +174,29 @@ class User {
 }
 ```
 
-##### Example of User entity definition
+### Events
+Manager has event handling based on methods included in the Class. We have Entity events at this moment:
+ - onCreate
+ - onUpdate
+
+#### Examples of event usage. 
+There you can see how we can update an entity **before** create or update sql is executed.
+```php
+/**
+ * @param Manager $manager
+ */
+public function beforeCreateEvent(Manager $manager)
+{
+	$this->createdAt = new \DateTime();
+}
+
+public function beforeUpdateEvent(Manager $manager)
+{
+	$this->updatedAt = new \DateTime();
+}
+```
+
+### Example of User entity definition
 ```php
 <?php
 
