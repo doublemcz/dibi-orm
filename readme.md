@@ -1,7 +1,6 @@
 # Dibi ORM
 
-Dibi ORM is lightweight ORM solution based on Dibi. Works closely with Nette Framework. 
-ORM logic comes from Doctrine 2 but is very simplified. Focus is also on performance.
+Dibi ORM is lightweight ORM solution based on Dibi. ORM logic comes from Doctrine 2 but is very simplified. Focus is also on performance.
 
 ### Installation
 I recommend you to install via Composer.
