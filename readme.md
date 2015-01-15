@@ -80,6 +80,7 @@ $user = $databaseManager->find('AnEntityName', 'foo', 'bar');
 We can find an Entity by property e-mail
 ```php
 $user = $databaseManager->findOneBy('User', array('email' => 'email@domain.com'));
+```
 
 #### Get entities in table
 ```php
