@@ -90,7 +90,7 @@ Find all users in table 'users'
 $users = $databaseManager->findBy('User');
 ```
 You can filter and sort by array. We are trying to find Users in role 'admin' ordered by id desc.
-```
+```php
 $users = $databaseManager
 	->findBy(
 		'User', 
