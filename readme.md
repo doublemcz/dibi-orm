@@ -173,7 +173,7 @@ class User {
 }
 ```
 
-#### @ManyToMany relation
+##### Relation @manyToMany
 Relation many-to-many is used when your data are connected over relation table.
 
 ```php
