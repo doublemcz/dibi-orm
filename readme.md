@@ -41,7 +41,7 @@ extensions:
 	dibi: Dibi\Bridges\Nette\DibiExtension22
 	
 services:
-	databaseManager: doublemcz\dibiorm\Manager(%entityManager%)
+	databaseManager: doublemcz\dibiorm\Manager(%databaseManager%)
 		
 parameters:
 	databaseManager:
@@ -122,7 +122,7 @@ Every class property that has relation to database column must have tag @column.
 Every entity must have primary key. The definition is composed by @primaryKey and @column. If you want set id that was generated from database on create sql query then specify @autoIncrement tag.
 
 ##### Relations
-At this moment you can specify @oneToOne and @oneToMany relation. Both need a join specification tag defined as follow:
+Basic relation are defined by @oneToOne and @oneToMany tag. Both need a join specification tag defined as follow:
 @join(column="id", referenceColumn="userId"). It says that it is joing column User.id to RelatedTable.userId column.
 
 ###### Real example:
@@ -149,7 +149,7 @@ class User {
 ```
 
 ###### Static join parameter
-It is also possible to specify static join parameter to filter table by column. Here you can see static join that defines user.type = 'error'
+It is also possible to specify static join parameter to filter table by column. Here you can see static join that defines user.type = 'error'. Static join is possible only on @oneToOne and @oneToMany relations.
 ```php
 /**
  * @table (name="users")
@@ -171,6 +171,19 @@ class User {
 		return  $this->errorLog;
 	}
 }
+```
+
+#### @ManyToMany relation
+Relation many-to-many is used when your data are connected over relation table.
+
+```php
+/**
+ * @manyToMany(entity="AnEntityName", joiningTable="joining_table")
+ * @joinPrimary(column="id", referenceColumn="userId")
+ * @joinSecondary(column="userLogId", referenceColumn="id")
+ * @var AnEntityName[]
+ */
+protected $foo;
 ```
 
 ### Events
