@@ -53,64 +53,6 @@ class Manager
 	}
 
 	/**
-	 * Finds an entity by given id. For multiple primary key you can pass next parameters by order definition in your entity.
-	 *
-	 * @param string $entityName
-	 * @param mixed $id
-	 * @throws \RuntimeException
-	 * @return mixed
-	 */
-	public function find($entityName, $id)
-	{
-		$this->handleConnection();
-		$entityAttributes = $this->createClassMetadata($entityName);
-		$args = func_get_args();
-		unset($args[0]);
-		if (count($entityAttributes->getPrimaryKey()) != count(array_values($args))) {
-			throw new \RuntimeException('You are trying to find and entity with full primary key. Did you forget to specify an another value as an argument?');
-		}
-
-		$primaryKey = array_combine($entityAttributes->getPrimaryKey(), array_values($args));
-		$data = $this->dibiConnection->select(array_keys($entityAttributes->getProperties()))
-			->from($entityAttributes->getTable())
-			->where($primaryKey)
-			->fetch();
-
-		$instance = DataHelperLoader::CreateFlatClass($this, $entityAttributes, $data);
-		if ($instance) {
-			$this->registerClass($instance, $entityAttributes, self::FLAG_INSTANCE_UPDATE);
-		}
-
-		return $instance;
-	}
-
-
-	/**
-	 * Finds an entity by given array
-	 *
-	 * @param string $entityName
-	 * @param array $where
-	 * @throws \RuntimeException
-	 * @return mixed
-	 */
-	public function findOneBy($entityName, $where = array())
-	{
-		$this->handleConnection();
-		$entityAttributes = $this->createClassMetadata($entityName);
-		$data = $this->dibiConnection->select(array_keys($entityAttributes->getProperties()))
-			->from($entityAttributes->getTable())
-			->where($where)
-			->fetch();
-
-		$instance = DataHelperLoader::CreateFlatClass($this, $entityAttributes, $data);
-		if ($instance) {
-			$this->registerClass($instance, $entityAttributes, self::FLAG_INSTANCE_UPDATE);
-		}
-
-		return $instance;
-	}
-
-	/**
 	 * @param object $entity
 	 * @throws \RuntimeException
 	 */
@@ -298,7 +240,10 @@ class Manager
 
 		$values = $this->getInstanceValueMap($instance, $entityAttributes);
 
-		return $this->dibiConnection->update($entityAttributes->getTable(), $values)->where($this->buildPrimaryKey($instance, $entityAttributes))->execute(\dibi::AFFECTED_ROWS) == 1;
+		return $this->dibiConnection
+			->update($entityAttributes->getTable(), $values)
+			->where($this->buildPrimaryKey($instance, $entityAttributes))
+			->execute(\dibi::AFFECTED_ROWS) == 1;
 	}
 
 	/**
@@ -502,5 +447,108 @@ class Manager
 	public function getProxiesPath()
 	{
 		return $this->proxiesPath;
+	}
+
+
+	/*******************                     ***********************/
+	/***************     REPOSITORY HANDLERS     *******************/
+	/*******************                     ***********************/
+
+
+	/**
+	 * Finds an entity by given id. For multiple primary key you can pass next parameters by order definition in your entity.
+	 *
+	 * @param string $entityName
+	 * @param mixed $id
+	 * @throws \RuntimeException
+	 * @return mixed
+	 */
+	public function find($entityName, $id)
+	{
+		$this->handleConnection();
+		$entityAttributes = $this->createClassMetadata($entityName);
+		$args = func_get_args();
+		unset($args[0]);
+		if (count($entityAttributes->getPrimaryKey()) != count(array_values($args))) {
+			throw new \RuntimeException('You are trying to find and entity with full primary key. Did you forget to specify an another value as an argument?');
+		}
+
+		$primaryKey = array_combine($entityAttributes->getPrimaryKey(), array_values($args));
+		$data = $this->dibiConnection->select(array_keys($entityAttributes->getProperties()))
+			->from($entityAttributes->getTable())
+			->where($primaryKey)
+			->fetch();
+
+		$instance = DataHelperLoader::CreateFlatClass($this, $entityAttributes, $data);
+		if ($instance) {
+			$this->registerClass($instance, $entityAttributes, self::FLAG_INSTANCE_UPDATE);
+		}
+
+		return $instance;
+	}
+
+
+	/**
+	 * Finds an entity by given array
+	 *
+	 * @param string $entityName
+	 * @param array $where
+	 * @param array @orderBy
+	 * @throws \RuntimeException
+	 * @return mixed
+	 */
+	public function findOneBy($entityName, $where = array(), $orderBy = array())
+	{
+		$this->handleConnection();
+		$entityAttributes = $this->createClassMetadata($entityName);
+		$fluent = $this->dibiConnection->select(array_keys($entityAttributes->getProperties()))
+			->from($entityAttributes->getTable())
+			->where($where);
+
+		if (!empty($orderBy)) {
+			$fluent->orderBy($orderBy);
+		}
+
+		$data = $fluent->fetch();
+		$instance = DataHelperLoader::CreateFlatClass($this, $entityAttributes, $data);
+		if ($instance) {
+			$this->registerClass($instance, $entityAttributes, self::FLAG_INSTANCE_UPDATE);
+		}
+
+		return $instance;
+	}
+
+	/**
+	 * @param string $entityName
+	 * @param array $where
+	 * @param array $orderBy
+	 * @return array
+	 */
+	public function findBy($entityName, $where = array(), $orderBy = array())
+	{
+		$classMetadata = $this->createClassMetadata($entityName);
+		$fluent = $this->getDibiConnection()
+			->select(array_keys($classMetadata->getProperties()))
+			->from($classMetadata->getTable());
+
+		if (!empty($where)) {
+			$fluent->where($where);
+		}
+
+		if (!empty($orderBy)) {
+			$fluent->orderBy($orderBy);
+		}
+
+		$result = array();
+		$sqlResult = $fluent->fetchAll();
+		if (!empty($sqlResult)) {
+			foreach ($sqlResult as $rowData) {
+				$class = DataHelperLoader::createFlatClass($this, $classMetadata, $rowData);
+				$this->registerClass($class, $classMetadata, Manager::FLAG_INSTANCE_UPDATE);
+				$result[] = $class;
+			}
+		}
+
+		return $result;
 	}
 }

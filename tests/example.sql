@@ -35,3 +35,11 @@ CREATE TABLE `users_details` (
 COLLATE='utf8_czech_ci'
 ENGINE=InnoDB
 AUTO_INCREMENT=79;
+
+CREATE TABLE `joining_table` (
+	`userId` SMALLINT UNSIGNED NOT NULL,
+	`userLogId` SMALLINT UNSIGNED NOT NULL,
+	PRIMARY KEY (`userId`, `userLogId`)
+)
+COLLATE='utf8_czech_ci'
+ENGINE=InnoDB;

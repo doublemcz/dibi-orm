@@ -45,36 +45,73 @@ class DataHelperLoader
 	/**
 	 * @param Manager $manager
 	 * @param object $instance
-	 * @param ClassMetadata $entityAttributes
+	 * @param ClassMetadata $classMetadata
 	 */
-	public static function handleRelations($manager, $instance, ClassMetadata $entityAttributes)
+	public static function handleRelations($manager, $instance, ClassMetadata $classMetadata)
 	{
-		foreach ($entityAttributes->getRelationsOneToMany() as $propertyName => $relation) {
-			$targetEntityAttributes = $manager->createClassMetadata($relation['entity']);
-			self::setPropertyValue(
-				$instance,
-				$propertyName,
-				new ResultCollection($manager, $targetEntityAttributes)
-			);
-		}
+		self::handleRelationsOneToOne($manager, $instance, $classMetadata);
+		self::handleRelationsOneToMany($manager, $instance, $classMetadata);
+		self::handleRelationsManyToMany($manager, $instance, $classMetadata);
+	}
 
-		foreach ($entityAttributes->getRelationsOneToOne() as $propertyName => $relation) {
-			$targetEntityAttributes = $manager->createClassMetadata($relation['entity']);
+	/**
+	 * @param ClassMetadata $classMetadata
+	 * @param Manager $manager
+	 * @param object $instance
+	 */
+	private static function handleRelationsOneToOne(Manager $manager, $instance, ClassMetadata $classMetadata)
+	{
+		foreach ($classMetadata->getRelationsOneToOne() as $propertyName => $relationData) {
+			$targetEntityAttributes = $manager->createClassMetadata($relationData['entity']);
 			$proxyClass = self::createProxyClass($manager, $targetEntityAttributes);
 			self::setPropertyValue(
 				$instance,
 				$propertyName,
 				$proxyClass,
-				$entityAttributes->getPropertyReflection($propertyName)
+				$classMetadata->getPropertyReflection($propertyName)
 			);
 			$joinMap = array();
 
-			$joinMap[$relation['join']['referenceColumn']] = self::getPropertyValue($instance, $relation['join']['column']);
-			if (!empty($relation['staticJoin'])) {
-				$joinMap[$relation['staticJoin']['column']] = $relation['staticJoin']['value'];
+			$joinMap[$relationData['join']['referenceColumn']] = self::getPropertyValue($instance, $relationData['join']['column']);
+			if (!empty($relationData['staticJoin'])) {
+				$joinMap[$relationData['staticJoin']['column']] = $relationData['staticJoin']['value'];
 			}
 
 			self::setPropertyValue($proxyClass, 'joiningMap', $joinMap);
+		}
+	}
+
+	/**
+	 * @param Manager $manager
+	 * @param object $instance
+	 * @param ClassMetadata $classMetadata
+	 */
+	private static function handleRelationsOneToMany(Manager $manager, $instance, ClassMetadata $classMetadata)
+	{
+		foreach ($classMetadata->getRelationsOneToMany() as $propertyName => $relationData) {
+			$targetEntityAttributes = $manager->createClassMetadata($relationData['entity']);
+			self::setPropertyValue(
+				$instance,
+				$propertyName,
+				new ResultCollection($instance, $manager, $targetEntityAttributes, $relationData)
+			);
+		}
+	}
+
+	/**
+	 * @param Manager $manager
+	 * @param object $instance
+	 * @param ClassMetadata $classMetadata
+	 */
+	private static function handleRelationsManyToMany(Manager $manager, $instance, ClassMetadata $classMetadata)
+	{
+		foreach ($classMetadata->getRelationsManyToMany() as $propertyName => $relationData) {
+			$targetEntityAttributes = $manager->createClassMetadata($relationData['entity']);
+			self::setPropertyValue(
+				$instance,
+				$propertyName,
+				new ResultCollection($instance, $manager, $targetEntityAttributes, $relationData)
+			);
 		}
 	}
 
@@ -127,9 +164,9 @@ class DataHelperLoader
 		$propertyReflection = new \ReflectionProperty(get_class($instance), $property);
 
 		if (!$propertyReflection->isPublic()) {
-			$propertyReflection->setAccessible(true);
+			$propertyReflection->setAccessible(TRUE);
 			$propertyReflection->setValue($instance, $value);
-			$propertyReflection->setAccessible(false);
+			$propertyReflection->setAccessible(FALSE);
 		} else {
 			$propertyReflection->setValue($instance, $value);
 		}

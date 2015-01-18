@@ -4,6 +4,8 @@ namespace doublemcz\dibiorm;
 
 class ResultCollection implements \Iterator, \Countable, \ArrayAccess
 {
+	/** @var object */
+	private $parent;
 	/** @var Manager */
 	protected $manager;
 	/** @var null|array */
@@ -11,19 +13,21 @@ class ResultCollection implements \Iterator, \Countable, \ArrayAccess
 	/** @var int */
 	protected $position = 0;
 	/** @var ClassMetadata */
-	protected $entityAttributes;
+	protected $classMetadata;
 	/** @var array */
 	protected $joinParameters;
 
 	/**
+	 * @param object $parent
 	 * @param Manager $manager
 	 * @param ClassMetadata $entityAttributes
 	 * @param array $joinParameters
 	 */
-	public function __construct(Manager $manager, ClassMetadata $entityAttributes, $joinParameters = array())
+	public function __construct($parent, Manager $manager, ClassMetadata $entityAttributes, $joinParameters = array())
 	{
+		$this->parent = $parent;
 		$this->manager = $manager;
-		$this->entityAttributes = $entityAttributes;
+		$this->classMetadata = $entityAttributes;
 		$this->joinParameters = $joinParameters;
 	}
 
@@ -33,17 +37,61 @@ class ResultCollection implements \Iterator, \Countable, \ArrayAccess
 			return;
 		}
 
-		$result = $this->manager->getDibiConnection()->select(array_keys($this->entityAttributes->getProperties()))
-			->from($this->entityAttributes->getTable())
-			->where($this->joinParameters)
-			->fetchAll();
-
+		$result = $this->getData();
 		$this->data = array();
 		if (!empty($result)) {
 			foreach ($result as $rowData) {
-				$this->data[] = DataHelperLoader::createFlatClass($this->manager, $this->entityAttributes, $rowData);
+				$this->data[] = DataHelperLoader::createFlatClass($this->manager, $this->classMetadata, $rowData);
 			}
 		}
+	}
+
+	/**
+	 * @return array
+	 */
+	private function getData()
+	{
+		$columns = $this->prefixColumnsForFetch(array_keys($this->classMetadata->getProperties()));
+		switch ($this->joinParameters['relation']) {
+			case ClassMetadata::JOIN_ONE_TO_MANY:
+				$where = sprintf("a.%s = %%s",$this->joinParameters['join']['referenceColumn']);
+				return $this->manager->getDibiConnection()->select($columns)
+					->from($this->classMetadata->getTable())->as('a')
+					->where($where, DataHelperLoader::getPropertyValue($this->parent, $this->joinParameters['join']['column']))
+					->fetchAll();
+				break;
+			case ClassMetadata::JOIN_MANY_TO_MANY:
+				$targetClassMetadata = $this->manager->createClassMetadata($this->joinParameters['entity']);
+				return $this->manager->getDibiConnection()->select($columns)
+					->from($targetClassMetadata->getTable())->as('a')
+					->innerJoin($this->joinParameters['joiningTable'])->as('b')
+					->on(sprintf(
+						'a.%s = b.%s',
+						$this->joinParameters['joinSecondary']['referenceColumn'],
+						$this->joinParameters['joinSecondary']['column']
+					))->and(
+						'b.' . $this->joinParameters['joinPrimary']['referenceColumn'] . ' = %s',
+						DataHelperLoader::getPropertyValue($this->parent,  $this->joinParameters['joinPrimary']['column'])
+					)
+					->fetchAll();
+				break;
+			default:
+				throw new \InvalidArgumentException(sprintf('Invalid join specified %s', $this->joinParameters['relation']));
+		}
+	}
+
+	/**
+	 * @param array $columns
+	 * @param string $prefix
+	 * @return array
+	 */
+	private function prefixColumnsForFetch($columns, $prefix = 'a')
+	{
+		foreach ($columns as $key => $column) {
+			$columns[$key] = $prefix . '.' . $column;
+		}
+
+		return $columns;
 	}
 
 	/**
@@ -111,7 +159,6 @@ class ResultCollection implements \Iterator, \Countable, \ArrayAccess
 		$this->fetchData();
 		unset($this->data[$offset]);
 	}
-
 
 	/**
 	 * @return int

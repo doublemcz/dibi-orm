@@ -4,6 +4,10 @@ namespace Doublemcz\Dibiorm;
 
 class ClassMetadata
 {
+	const JOIN_ONE_TO_ONE = 'oneToOne';
+	const JOIN_ONE_TO_MANY = 'oneToMany';
+	const JOIN_MANY_TO_MANY = 'manyToMany';
+
 	/** @var string */
 	protected $className;
 	/** @var string */
@@ -20,6 +24,8 @@ class ClassMetadata
 	protected $oneToMany = array();
 	/** @var array */
 	protected $oneToOne = array();
+	/** @var array */
+	protected $manyToMany = array();
 	/** @var array */
 	protected $propertyReflections = array();
 	/** @var bool */
@@ -57,6 +63,11 @@ class ClassMetadata
 		}
 	}
 
+	/**
+	 * @param string $entityName
+	 * @return array
+	 * @throws DocParsingException
+	 */
 	private function getTableAttributes($entityName)
 	{
 		$reflection = new \ReflectionClass($entityName);
@@ -65,6 +76,10 @@ class ClassMetadata
 		return $this->parseDoc($doc);
 	}
 
+	/**
+	 * @param string $entityName
+	 * @throws DocParsingException
+	 */
 	private function findColumns($entityName)
 	{
 		$reflection = new \ReflectionClass($entityName);
@@ -91,50 +106,100 @@ class ClassMetadata
 
 	/**
 	 * @param \ReflectionProperty $property
-	 * @param $docLineParameters
+	 * @param array $docLineParameters Parameters that are in brackets after @join key @join(column="foo")
 	 */
 	protected function findRelations(\ReflectionProperty $property, $docLineParameters)
 	{
-		$this->handleOneToXRelations($property, $docLineParameters);
+		if (array_key_exists(self::JOIN_ONE_TO_ONE, $docLineParameters)) {
+			$relation = self::JOIN_ONE_TO_ONE;
+		} else if (array_key_exists(self::JOIN_ONE_TO_MANY, $docLineParameters)) {
+			$relation = self::JOIN_ONE_TO_MANY;
+		} else if (array_key_exists(self::JOIN_MANY_TO_MANY, $docLineParameters)) {
+			$relation = self::JOIN_MANY_TO_MANY;
+		} else {
+			$relation = FALSE;
+		}
+
+		if ($relation) {
+			$this->validateJoinParameters($property, $docLineParameters, $relation);
+			$joinParameters = array(
+				'relation' => $relation,
+				'property' => $property->getName(),
+				'entity' => $docLineParameters[$relation]['entity'],
+				'join' => array_key_exists('join', $docLineParameters) ? $docLineParameters['join'] : NULL,
+				'staticJoin' => !empty($docLineParameters['staticJoin']) ? $docLineParameters['staticJoin'] : array(),
+				'joiningTable' => !empty($docLineParameters['manyToMany']['joiningTable']) ? $docLineParameters['manyToMany']['joiningTable'] : NULL,
+				'joinPrimary' => array_key_exists('joinPrimary', $docLineParameters) ? $docLineParameters['joinPrimary'] : NULL,
+				'joinSecondary' => array_key_exists('joinSecondary', $docLineParameters) ? $docLineParameters['joinSecondary'] : NULL,
+
+			);
+
+			$this->{$relation}[$property->getName()] = $joinParameters;
+		}
 	}
 
 	/**
 	 * @param \ReflectionProperty $property
-	 * @param $docLineParameters
+	 * @param array $docLineParameters Parameters that are in brackets after @join key @join(column="foo")
+	 * @param string $relation i.e. oneToMany, oneToOne...
 	 * @throws DocParsingException
 	 */
-	protected function handleOneToXRelations(\ReflectionProperty $property, $docLineParameters)
+	private function validateJoinParameters(\ReflectionProperty $property, $docLineParameters, $relation)
 	{
-		$oneToX = array_key_exists('oneToMany', $docLineParameters)
-			? 'oneToMany'
-			: (array_key_exists('oneToOne', $docLineParameters) ? 'oneToOne' : FALSE);
-
-		if ($oneToX) {
-			if (empty($docLineParameters[$oneToX]['entity'])) {
-				throw new DocParsingException(
-					sprintf(
-						'You set property "%s" as "%s" but the entity attribute is missing. You have to specify entity attribute like this @%s(entity="EntityName"). Class %s.',
-						$property->getName(), $oneToX, $oneToX, $property->class
-					)
-				);
-			}
-
-			if (!array_key_exists('join', $docLineParameters)) {
-				throw new DocParsingException(
-					sprintf('You set property "%s" as "%s" but no join is specified. Did you forget to set @join? Class %s.',
-						$property->getName(), $oneToX, $property->class
-					)
-				);
-			}
-
-			$joinParameters = array(
-				'property' => $property->getName(),
-				'entity' => $docLineParameters[$oneToX]['entity'],
-				'join' => $docLineParameters['join'],
-				'staticJoin' => !empty($docLineParameters['staticJoin']) ? $docLineParameters['staticJoin'] : array(),
+		if (empty($docLineParameters[$relation]['entity'])) {
+			throw new DocParsingException(
+				sprintf(
+					'You set property "%s" as "%s" but the entity attribute is missing. You have to specify entity attribute like this @%s(entity="EntityName"). Class %s.',
+					$property->getName(), $relation, $relation, $property->class
+				)
 			);
+		}
 
-			$this->{$oneToX}[$property->getName()] = $joinParameters;
+		switch ($relation) {
+			case self::JOIN_ONE_TO_ONE :
+			case self::JOIN_ONE_TO_MANY :
+				if (!array_key_exists('join', $docLineParameters)) {
+					$message = sprintf(
+						'You set property "%s" as "%s" but no join is specified. Did you forget to set @join? Class %s.',
+						$property->getName(), $relation, $property->class
+					);
+					throw new DocParsingException($message);
+				}
+
+				if (empty($docLineParameters['join']['column']) || empty($docLineParameters['join']['referenceColumn'])) {
+					$message = sprintf(
+						'You must set column and referenceColumn in @join parameters. Property %s. Class %s.',
+						$property->name,
+						$property->class
+					);
+					throw new DocParsingException($message);
+				}
+
+				break;
+			case self::JOIN_MANY_TO_MANY :
+				if (!array_key_exists('joinPrimary', $docLineParameters) || !array_key_exists('joinSecondary', $docLineParameters)) {
+					$message = sprintf(
+						'You set property %s as @manyToMany but join is set incorrectly.
+						You must set @joinPrimary and @joinSecondary. Class %s.',
+						$property->getName(), $property->class
+					);
+					throw new DocParsingException($message);
+				}
+
+				foreach (array('joinPrimary', 'joinSecondary') as $join) {
+					if (empty($docLineParameters[$join]['column']) || empty($docLineParameters[$join]['referenceColumn'])) {
+						$message = sprintf(
+							'You must set column and referenceColumn in %s parameters. Property %s. Class %s.',
+							$join,
+							$property->name,
+							$property->class
+						);
+
+						throw new DocParsingException($message);
+					}
+				}
+
+				break;
 		}
 	}
 
@@ -152,7 +217,7 @@ class ClassMetadata
 		$result = array();
 		$lines = explode("\n", $docRaw);
 		foreach ($lines as $line) {
-			preg_match('~\s+\*\s@([a-zA-Z]+)(.+)?~', $line, $matches);
+			preg_match('~\s+\*\s@([a-zA-Z0-9]+)(.+)?~', $line, $matches);
 			if (!empty($matches)) {
 				if (!empty($matches[2])) {
 					$result[$matches[1]] = $this->parseDocParameters(trim($matches[2]));
@@ -248,6 +313,14 @@ class ClassMetadata
 	/**
 	 * @return array
 	 */
+	public function getRelationsManyToMany()
+	{
+		return $this->manyToMany;
+	}
+
+	/**
+	 * @return array
+	 */
 	public function getPropertyReflections()
 	{
 		return $this->propertyReflections;
@@ -285,5 +358,13 @@ class ClassMetadata
 	public function hasBeforeUpdateEvent()
 	{
 		return $this->hasBeforeUpdateEvent;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getEntityName()
+	{
+		return substr($this->className, strrpos($this->className, '/') + 1);
 	}
 }

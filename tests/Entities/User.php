@@ -16,9 +16,16 @@ class User {
 	public $id;
 
 	/**
+	 * @manyToMany(entity="UserLog", joiningTable="joining_table")
+	 * @joinPrimary(column="id", referenceColumn="userId")
+	 * @joinSecondary(column="userLogId", referenceColumn="id")
+	 * @var UserLog[]
+	 */
+	protected $joiningTableUserLog;
+
+	/**
 	 * @oneToMany(entity="UserLog")
 	 * @join(column="id", referenceColumn="userId")
-	 * @staticJoin(column="type", value="error")
 	 * @var User
 	 */
 	protected $userLog;
@@ -31,7 +38,7 @@ class User {
 	protected $detail;
 
 	/**
-	 * @column(type="string", length="50")
+	 * @column(type="string")
 	 * @var string
 	 */
 	public $fullname;
@@ -53,6 +60,14 @@ class User {
 	 * @var \DateTime
 	 */
 	public $birthDate;
+
+	/**
+	 * @return UserLog[]
+	 */
+	public function getJoiningTableUserLog()
+	{
+		return $this->joiningTableUserLog;
+	}
 
 	/**
 	 * @return UserLog[]

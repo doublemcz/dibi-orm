@@ -1,12 +1,11 @@
 <?php
 require __DIR__ . '/vendor/autoload.php';
-\Tracy\Debugger::$strictMode = TRUE;
-\Tracy\Debugger::enable();
-
 require __DIR__ . '/../src/dibiorm.php';
 require __DIR__ . '/Entities/User.php';
 require __DIR__ . '/Entities/UserLog.php';
 require __DIR__ . '/Entities/UserDetail.php';
+
+Tracy\Debugger::enable();
 
 $storage = new Nette\Caching\Storages\FileStorage('temp');
 $storage = new Nette\Caching\Storages\MemoryStorage();
@@ -27,11 +26,11 @@ $parameters = array(
 $entityManager = new \doublemcz\dibiorm\Manager($parameters);
 
 /**** ADD NEW USER **/
-$user = new \doublemcz\dibiorm\Examples\Entities\User();
-$user->fullname = 'Test';
-$user->birthDate = new DateTime('1988-08-03 15:00');
-$entityManager->persist($user);
-$entityManager->flush();
+//$user = new \doublemcz\dibiorm\Examples\Entities\User();
+//$user->fullname = 'Test';
+//$user->birthDate = new DateTime('1988-08-03 15:00');
+//$entityManager->persist($user);
+//$entityManager->flush();
 
 /**** FIND USER AND CHANGE HIM ****/
 /** @var \doublemcz\dibiorm\Examples\Entities\User $user */
@@ -47,26 +46,28 @@ $entityManager->flush();
 //$users = $entityManager->getRepository('User')->findBy();
 //dump($users);
 
-
-/*** ONE TO MANY RELATION **/
-/** @var \doublemcz\dibiorm\Examples\Entities\User $user */
-//$user = $entityManager->find('User', 1);
-//$userLog = $user->getUserLog();
-//dump($userLog);
-//dump($userLog[0]);
-
-
 /*** ONE TO ONE RELATION **/
 /** @var \doublemcz\dibiorm\Examples\Entities\User $user */
 //$user = $entityManager->find('User', 1);
 //$detail = $user->getDetail();
 //dump($detail->note);
 
+/*** ONE TO MANY RELATION **/
+/** @var \doublemcz\dibiorm\Examples\Entities\User $user */
+//$user = $entityManager->find('User', 1);
+//$userLog = $user->getUserLog();
+//dump($userLog[0]);
+
+
+/*** JOINING TABLE */
+//$user = $entityManager->find('User', 1);
+//$userLog = $user->getJoiningTableUserLog();
+//dump($userLog[0]);
+
 /**** Speed test - loop over 1 000 records. ****/
 //for ($idx = 1; $idx < 1000; $idx++) {
 //	$user = $entityManager->find('User', $idx);
 //}
 //dump($entityManager);
-
 
 echo "done";
