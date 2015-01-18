@@ -1,4 +1,292 @@
 # Dibi ORM
-=============================================================================================
 
-Will be added soon. (Hopefully :-)
+Dibi ORM is lightweight ORM solution based on Dibi. ORM logic comes from Doctrine 2 but is very simplified. Focus is also on performance.
+
+### Installation
+I recommend you to install via Composer.
+
+```
+composer require doublemcz/dibi-orm
+```
+
+If you do not have Composer, download latest version from GitHub and require bootstrap file.
+```php
+require 'src/dibirom.php'
+```
+
+### Initialization
+```php
+$parameters = array(
+	'database' => array(
+		'host' => 'localhost',
+		'username' => 'root',
+		'password' => '',
+		'database' => 'dibiorm',
+		'driver' => 'mysqli',
+	),
+	'entityNamespace' => 'App\Entities',
+	'proxiesPath' => __DIR__ . '/temp',
+	'storage' => new Nette\Caching\Storages\FileStorage('temp'),
+);
+
+$databaseManager = new \doublemcz\dibiorm\Manager($parameters);
+```
+
+##### Usage in Nette
+
+Put this section into services.neon
+
+```neon
+extensions:
+	dibi: Dibi\Bridges\Nette\DibiExtension22
+	
+services:
+	databaseManager: doublemcz\dibiorm\Manager(%entityManager%)
+		
+parameters:
+	databaseManager:
+		database: 
+			host: localhost
+			username: userName
+			password: password
+			database: database
+		entityNamespace: App\Entities
+		proxiesPath: '%tempDir%/proxies'
+		storage: @cacheStorage
+```
+
+It is also possible to pass DibiConnection to parameter 'database'
+```neon
+parameters:
+	databaseManager:
+		database: @dibiConnection
+```
+
+
+### Data handling
+
+
+##### Get an Entity by ID
+Find a user with ID = 1
+```php
+$databaseManager->find('User', 1);
+```
+
+If user has more columns in primary key, you can pass it in order you defined the key at the entity
+```php
+$user = $databaseManager->find('AnEntityName', 'foo', 'bar');
+```
+
+##### Find an Entity by propety
+We can find an Entity by property e-mail
+```php
+$user = $databaseManager->findOneBy('User', array('email' => 'email@domain.com'));
+```
+
+
+##### Get entities in table
+Find all users in table 'users'
+```php
+$users = $databaseManager->findBy('User');
+```
+You can filter by where
+```
+$users = $databaseManager->findBy('User', array('role' => 'admin'));
+```
+
+
+##### Insert entity to database
+```php
+$user = new User();
+$user->name = 'Martin';
+$databaseManager->persist($user);
+$databaseManager->flush();
+```
+
+
+##### Update entity
+When you load an entity from repository then the entity is automatically managed by Manager. It means that if you make a change and flush changes over Manager a SQL query is automatically executed.
+
+```
+$user = $database->find('User', 1);
+$user->note = 'An updated note on user 1';
+$databaseManager->flush();
+```
+
+
+### Entity Settings
+All settings are defined by PhpDoc. Every entity must have @table tag to specify the source table defined on class PhpDoc.
+Every class property that has relation to database column must have tag @column.
+
+##### Defining primary column
+Every entity must have primary key. The definition is composed by @primaryKey and @column. If you want set id that was generated from database on create sql query then specify @autoIncrement tag.
+
+##### Relations
+At this moment you can specify @oneToOne and @oneToMany relation. Both need a join specification tag defined as follow:
+@join(column="id", referenceColumn="userId"). It says that it is joing column User.id to RelatedTable.userId column.
+
+###### Real example:
+```php
+/**
+ * @table (name="users")
+ */
+class User {
+	/**
+	 * @oneToMany(entity="UserLog")
+	 * @join(column="id", referenceColumn="userId")
+	 * @var User
+	 */
+	protected $userLog;
+	
+	/**
+	 * @return UserLog[]
+	 */
+	public function getUserLog()
+	{
+		return  $this->userLog;
+	}
+}
+```
+
+###### Static join parameter
+It is also possible to specify static join parameter to filter table by column. Here you can see static join that defines user.type = 'error'
+```php
+/**
+ * @table (name="users")
+ */
+class User {
+	/**
+	 * @oneToMany(entity="UserLog")
+	 * @join(column="id", referenceColumn="userId")
+	 * @staticJoin(column="type", value="error")
+	 * @var User
+	 */
+	protected $errorLog;
+	
+	/**
+	 * @return UserLog[]
+	 */
+	public function getErrorLog()
+	{
+		return  $this->errorLog;
+	}
+}
+```
+
+### Events
+Manager has event handling based on methods included in the Class. We have Entity events at this moment:
+ - beforeCreateEvent
+ - beforeUpdateEvent
+
+#### Examples of event usage. 
+There you can see how we can update an entity **before** create or update sql is executed.
+```php
+/**
+ * @param Manager $manager
+ */
+public function beforeCreateEvent(Manager $manager)
+{
+	$this->createdAt = new \DateTime();
+}
+
+public function beforeUpdateEvent(Manager $manager)
+{
+	$this->updatedAt = new \DateTime();
+}
+```
+
+### Example of User entity definition
+```php
+<?php
+
+namespace doublemcz\dibiorm\Examples\Entities;
+use doublemcz\dibiorm\Manager;
+
+/**
+ * @table (name="users")
+ */
+class User {
+	/**
+	 * @primaryKey
+	 * @autoIncrement
+	 * @column
+	 * @var int
+	 */
+	public $id;
+	
+	/**
+	 * @oneToMany(entity="UserLog")
+	 * @join(column="id", referenceColumn="userId")
+	 * @var User
+	 */
+	protected $userLog;
+		
+	/**
+	 * @oneToMany(entity="UserLog")
+	 * @join(column="id", referenceColumn="userId")
+	 * @staticJoin(column="type", value="error")
+	 * @var User
+	 */
+	protected $userErrorLog;
+	
+	/**
+	 * @oneToOne(entity="UserDetail")
+	 * @join(column="id", referenceColumn="userId")
+	 * @var UserDetail
+	 */
+	protected $detail;
+	
+	/**
+	 * @column
+	 * @var string
+	 */
+	public $fullname;
+	
+	/**
+	 * @column
+	 * @var \DateTime
+	 */
+	public $birthDate;
+	
+	/**
+	 * @column
+	 * @var \DateTime
+	 */
+	public $createdAt;
+	
+	/**
+	 * @column
+	 * @var \DateTime
+	 */
+	public $updatedAt;
+	
+	/**
+	 * @return UserLog[]
+	 */
+	public function getUserLog()
+	{
+		return $this->userLog;
+	}
+	
+	/**
+	 * @return UserDetail
+	 */
+	public function getDetail()
+	{
+		return $this->detail;
+	}
+	
+	/**
+	 * @param Manager $manager
+	 */
+	public function beforeCreateEvent(Manager $manager)
+	{
+		$this->createdAt = new \DateTime();
+	}
+	
+	public function beforeUpdateEvent(Manager $manager)
+	{
+		$this->updatedAt = new \DateTime();
+	}
+}
+```
