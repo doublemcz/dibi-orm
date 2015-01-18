@@ -112,12 +112,32 @@ $databaseManager->flush();
 ##### Update entity
 When you load an entity from repository then the entity is automatically managed by Manager. It means that if you make a change and flush changes over Manager a SQL query is automatically executed.
 
-```
-$user = $database->find('User', 1);
+```php
+$user = $databaseManager->find('User', 1);
 $user->note = 'An updated note on user 1';
 $databaseManager->flush();
 ```
+##### Delete entity
+```php
+$user = $databaseManager->find('User', 1);
+$database->delete($user);
+$databaseManager->flush();
+```
+##### Database Manager knows what have changed
+You can flush whenever you want. Manager knows what data have changed and does necessary stuff on flush.
 
+```php
+$user = $databaseManager->find('User', 1);
+$user->note = 'An updated note on user 1';
+
+$user2 = $databaseManager->find('User', 2);
+$user2->note = 'An updated note on user 2';
+
+$user3 = $databaseManager->find('User', 3);
+$database->delete($user3);
+// Flush makes automatically two sql updates and one delete
+$databaseManager->flush();
+```
 
 ### Entity Settings
 All settings are defined by PhpDoc. Every entity must have @table tag to specify the source table defined on class PhpDoc.
