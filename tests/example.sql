@@ -43,3 +43,19 @@ CREATE TABLE `joining_table` (
 )
 COLLATE='utf8_czech_ci'
 ENGINE=InnoDB;
+
+
+CREATE TABLE `cities` (
+	`id` SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	`name` VARCHAR(50) NOT NULL,
+	`population` MEDIUMINT UNSIGNED NOT NULL
+)
+COLLATE='utf8_czech_ci'
+ENGINE=InnoDB
+;
+
+ALTER TABLE `users`
+	ADD COLUMN `cityId` SMALLINT UNSIGNED NOT NULL DEFAULT '0' AFTER `birthDate`;
+
+INSERT INTO `dibi-orm`.`cities` (`id`, `name`, `population`) VALUES (1, 'Prague', 1250000);
+INSERT INTO `dibi-orm`.`cities` (`id`, `name`, `population`) VALUES (2, 'Mexico City', 10000000);

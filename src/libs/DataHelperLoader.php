@@ -27,11 +27,11 @@ class DataHelperLoader
 	 * @param Manager $manager
 	 * @param object $instance
 	 * @param \DibiRow $data
-	 * @param ClassMetadata $entityAttributes
+	 * @param ClassMetadata $classMetadata
 	 */
-	public static function loadClass(Manager $manager, $instance, $data, ClassMetadata $entityAttributes)
+	public static function loadClass(Manager $manager, $instance, $data, ClassMetadata $classMetadata)
 	{
-		foreach ($entityAttributes->getProperties() as $property => $columnAttributes) {
+		foreach ($classMetadata->getProperties() as $property => $columnAttributes) {
 			if (!array_key_exists($property, $data)) {
 				continue;
 			}
@@ -39,17 +39,18 @@ class DataHelperLoader
 			self::setPropertyValue($instance, $property, $data[$property]);
 		}
 
-		self::handleRelations($manager, $instance, $entityAttributes);
+		self::handleRelations($manager, $instance, $classMetadata, $data);
 	}
 
 	/**
 	 * @param Manager $manager
 	 * @param object $instance
 	 * @param ClassMetadata $classMetadata
+	 * @param \DibiRow $data
 	 */
-	public static function handleRelations($manager, $instance, ClassMetadata $classMetadata)
+	public static function handleRelations($manager, $instance, ClassMetadata $classMetadata, $data)
 	{
-		self::handleRelationsOneToOne($manager, $instance, $classMetadata);
+		self::handleRelationsOneToOne($manager, $instance, $classMetadata, $data);
 		self::handleRelationsOneToMany($manager, $instance, $classMetadata);
 		self::handleRelationsManyToMany($manager, $instance, $classMetadata);
 	}
@@ -58,26 +59,15 @@ class DataHelperLoader
 	 * @param ClassMetadata $classMetadata
 	 * @param Manager $manager
 	 * @param object $instance
+	 * @param \DibiRow $data
 	 */
-	private static function handleRelationsOneToOne(Manager $manager, $instance, ClassMetadata $classMetadata)
+	private static function handleRelationsOneToOne(Manager $manager, $instance, ClassMetadata $classMetadata, $data)
 	{
 		foreach ($classMetadata->getRelationsOneToOne() as $propertyName => $relationData) {
 			$targetEntityAttributes = $manager->createClassMetadata($relationData['entity']);
-			$proxyClass = self::createProxyClass($manager, $targetEntityAttributes);
-			self::setPropertyValue(
-				$instance,
-				$propertyName,
-				$proxyClass,
-				$classMetadata->getPropertyReflection($propertyName)
-			);
-			$joinMap = array();
-
-			$joinMap[$relationData['join']['referenceColumn']] = self::getPropertyValue($instance, $relationData['join']['column']);
-			if (!empty($relationData['staticJoin'])) {
-				$joinMap[$relationData['staticJoin']['column']] = $relationData['staticJoin']['value'];
-			}
-
-			self::setPropertyValue($proxyClass, 'joiningMap', $joinMap);
+			$proxyClass = self::createProxyClass($manager, $targetEntityAttributes, $instance, $propertyName);
+			self::setPropertyValue($instance, $propertyName, $proxyClass);
+			self::setPropertyValue($proxyClass, $relationData['join']['referenceColumn'], $data[$relationData['join']['column']]);
 		}
 	}
 
@@ -117,33 +107,41 @@ class DataHelperLoader
 
 	/**
 	 * @param Manager $manager
-	 * @param ClassMetadata $targetEntityAttributes
+	 * @param ClassMetadata $classMetadata
+	 * @param object $relationClassObject
+	 * @param string $propertyName
+	 * @return object
 	 */
-	public static function createProxyClass(Manager $manager, ClassMetadata $targetEntityAttributes)
+	public static function createProxyClass(Manager $manager, ClassMetadata $classMetadata, $relationClassObject, $propertyName)
 	{
 		$proxyPath = sprintf(
 			'%s\%s.php',
 			$manager->getProxiesPath(),
-			str_replace('\\', '', $targetEntityAttributes->getClassName())
+			str_replace('\\', '', $classMetadata->getClassName())
 		);
 
 		if (!is_file($proxyPath)) {
-			self::createProxyClassFile($proxyPath, $targetEntityAttributes);
+			self::createProxyClassFile($proxyPath, $classMetadata);
 		}
 
-		$proxyClassName = sprintf('doublemcz\dibiorm\proxies\%s', $targetEntityAttributes->getClassName());
-		$entityClassName = $targetEntityAttributes->getClassName();
+		$proxyClassName = sprintf('doublemcz\dibiorm\proxies\%s', $classMetadata->getClassName());
+		$proxyInstance = new $proxyClassName($manager, $relationClassObject, $propertyName);
+		// Because __get cannot be used on public properties we must move them into array otherwise lazy loading on
+		// @oneToOne is not working
+		self::resetProxyProperties($proxyInstance, $classMetadata);
 
-		return new $proxyClassName($manager, new $entityClassName());
+		return $proxyInstance;
 	}
 
-	public static function createProxyClassFile($proxyPath, ClassMetadata $targetEntityAttributes)
+	public static function createProxyClassFile($proxyPath, ClassMetadata $classMetadata)
 	{
-		$classReflection = new \ReflectionClass($targetEntityAttributes->getClassName());
+		$classReflection = new \ReflectionClass($classMetadata->getClassName());
 		$replaces = array(
 			'CLASS_NAMESPACE' => $classReflection->getNamespaceName(),
 			'CLASS_NAME' => $classReflection->getShortName(),
+			'BASE_CLASS' => '\\' . $classReflection->getName(),
 		);
+
 		$proxyFileContent = file_get_contents(__DIR__ . '/Proxy.template');
 		foreach ($replaces as $key => $value) {
 			$proxyFileContent = str_replace('##' . $key . '##', $value, $proxyFileContent);
@@ -151,6 +149,21 @@ class DataHelperLoader
 
 		file_put_contents($proxyPath, $proxyFileContent);
 		require_once($proxyPath);
+	}
+
+	/**
+	 * @param object $proxyInstance
+	 * @param ClassMetadata $classMetadata
+	 */
+	private static function resetProxyProperties($proxyInstance, ClassMetadata $classMetadata)
+	{
+		$properties = array();
+		foreach (array_keys($classMetadata->getProperties()) as $propertyName) {
+			unset($proxyInstance->$propertyName);
+			$properties[$propertyName] = NULL;
+		}
+
+		self::setPropertyValue($proxyInstance, 'values', $properties);
 	}
 
 	/**

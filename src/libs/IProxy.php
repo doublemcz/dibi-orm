@@ -3,6 +3,6 @@ namespace doublemcz\dibiorm;
 
 interface IProxy
 {
-	public function getJoiningMap();
-	public function getClassInstance();
+	public function getRelationClass();
+	public function getKey();
 }

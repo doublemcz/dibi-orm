@@ -31,11 +31,11 @@ class User {
 	protected $userLog;
 
 	/**
-	 * @oneToOne(entity="UserDetail")
-	 * @join(column="id", referenceColumn="userId")
-	 * @var UserDetail
+	 * @oneToOne(entity="City")
+	 * @join(column="cityId", referenceColumn="id")
+	 * @var City
 	 */
-	protected $detail;
+	protected $city;
 
 	/**
 	 * @column(type="string")
@@ -83,6 +83,22 @@ class User {
 	public function getDetail()
 	{
 		return $this->detail;
+	}
+
+	/**
+	 * @return City|null
+	 */
+	public function getCity()
+	{
+		return $this->city;
+	}
+
+	/**
+	 * @param mixed $city
+	 */
+	public function setCity($city)
+	{
+		$this->city = $city;
 	}
 
 	/**

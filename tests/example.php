@@ -1,26 +1,26 @@
 <?php
-require __DIR__ . '/vendor/autoload.php';
-require __DIR__ . '/../src/dibiorm.php';
-require __DIR__ . '/Entities/User.php';
-require __DIR__ . '/Entities/UserLog.php';
-require __DIR__ . '/Entities/UserDetail.php';
 
+require __DIR__ . '/vendor/autoload.php';
+Tracy\Debugger::$strictMode = TRUE;
 Tracy\Debugger::enable();
 
-$storage = new Nette\Caching\Storages\FileStorage('temp');
-$storage = new Nette\Caching\Storages\MemoryStorage();
+require __DIR__ . '/../src/dibiorm.php';
+$loader = new Nette\Loaders\RobotLoader;
+$loader->addDirectory(__DIR__ . '/Entities');
+$loader->setCacheStorage(new Nette\Caching\Storages\FileStorage('temp'));
+$loader->register();
 
 $parameters = array(
 	'database' => array(
 		'host' => 'localhost',
 		'username' => 'root',
 		'password' => '',
-		'database' => 'dibiorm',
+		'database' => 'dibi-orm',
 		'driver' => 'mysqli',
 	),
 	'entityNamespace' => 'doublemcz\dibiorm\Examples\Entities',
 	'proxiesPath' => __DIR__ . '/temp',
-	'storage' => $storage,
+	'storage' => new Nette\Caching\Storages\MemoryStorage(),
 );
 
 $entityManager = new \doublemcz\dibiorm\Manager($parameters);
@@ -34,9 +34,19 @@ $entityManager = new \doublemcz\dibiorm\Manager($parameters);
 
 /**** FIND USER AND CHANGE HIM ****/
 /** @var \doublemcz\dibiorm\Examples\Entities\User $user */
-//$user = $entityManager->find('User', 1);
+//$city = new \doublemcz\dibiorm\Examples\Entities\City();
+//$city->name = 'Pisek';
+//$city->population = 30000;
+//$entityManager->persist($city);
+
+$user = $entityManager->find('User', 1);
 //$user->fullname = 'Test';
+//$user->setCity($city);
 //$entityManager->flush();
+//dump($user);
+dump($user->getCity()->name);
+
+die('end');
 
 /**** FIND ONE BY ***/
 //$user = $entityManager->findOneBy('User', array('fullname' => 'test'));
@@ -57,7 +67,6 @@ $entityManager = new \doublemcz\dibiorm\Manager($parameters);
 //$user = $entityManager->find('User', 1);
 //$userLog = $user->getUserLog();
 //dump($userLog[0]);
-
 
 /*** JOINING TABLE */
 //$user = $entityManager->find('User', 1);

@@ -4,7 +4,8 @@
         "nette/caching": "*",
         "tracy/tracy": "v2.2.2",
         "dg/dibi": "v2.2.2",
-        "nette/tester": "*"
+        "nette/tester": "*",
+        "nette/robot-loader": "~2.2"
     },
     "authors": [
         {

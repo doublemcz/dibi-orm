@@ -4,24 +4,28 @@ namespace doublemcz\dibiorm\proxies\##CLASS_NAMESPACE##;
 use doublemcz\dibiorm\Manager;
 use doublemcz\dibiorm\IProxy;
 
-class ##CLASS_NAME## implements IProxy {
+class ##CLASS_NAME## extends ##BASE_CLASS## implements IProxy {
 	/** @var object */
-	private $class;
+	private $relationClass;
 	/** @var Manager */
 	private $manager;
 	/** @var bool */
 	private $isInitialized = FALSE;
-	/** @var array */
-	protected $joiningMap;
+   /** @var string */
+   private $key;
+   /** @var array */
+   private $values;
 
 	/**
-	 * @param Manager$manager
+	 * @param Manager $manager
 	 * @param object $class
+	 * @param string $key
 	 */
-	public function __construct(Manager $manager, $class)
+	public function __construct(Manager $manager, $relationClass, $key)
 	{
 		$this->manager = $manager;
-		$this->class = $class;
+		$this->relationClass = $relationClass;
+		$this->key = $key;
 	}
 
 	public function &__get($property)
@@ -30,16 +34,21 @@ class ##CLASS_NAME## implements IProxy {
 			$this->load();
 		}
 
-		return $this->class->{$property};
+		if (array_key_exists($property, $this->values)) {
+         return $this->values[$property];
+      }
+
+      throw new \InvalidArgumentException('You are trying to get non-existing property.');
 	}
 
 	public function __set($property, $value)
    {
-      if (!$this->isInitialized) {
-         $this->load();
+      if (array_key_exists($property, $this->values)) {
+         $this->values[$property] = $value;
+         return $this;
       }
 
-      $this->class->{$property} = $value;
+      throw new \InvalidArgumentException('You are trying to set non-existing property.');
    }
 
    public function __call($method, $arguments)
@@ -48,33 +57,32 @@ class ##CLASS_NAME## implements IProxy {
          $this->load();
       }
 
-      return call_user_method($method, $this->class, $arguments);
-   }
-
-   public static function __callStatic($method, $arguments)
-   {
-      throw new \RuntimeException('Not implemented');
+      return call_user_method($method, $this, $arguments);
    }
 
    private function load()
    {
-      $this->initialized = true;
+      if ($this->isInitialized) {
+         return;
+      }
+
+      $this->isInitialized = true;
       $this->manager->loadProxy($this);
    }
 
-	/**
-	 * @return array
-	 */
-   public function getJoiningMap()
+   /**
+    * @return object
+    */
+   public function getRelationClass()
    {
-      return $this->joiningMap;
+      return $this->relationClass;
    }
 
-	/**
-	 * @return object;
-	 */
-   public function getClassInstance()
+   /**
+    * @return string Returns property name in the related class where @oneToOne was specified
+    */
+   public function getKey()
    {
-      return $this->class;
+      return $this->key;
    }
 }

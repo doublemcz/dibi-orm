@@ -256,7 +256,7 @@ class Manager
 		$values = array();
 		foreach (array_keys($entityAttributes->getProperties()) as $propertyName) {
 			$value = DataHelperLoader::getPropertyValue($instance, $propertyName);
-			$values[$propertyName] = $this->translateValue($value);;
+			$values[$propertyName] = $this->convertValue($value);;
 		}
 
 		return $values;
@@ -266,7 +266,7 @@ class Manager
 	 * @param mixed $value
 	 * @return mixed
 	 */
-	private function translateValue($value)
+	private function convertValue($value)
 	{
 		if (is_object($value)) {
 			if (get_class($value) == "DateTime" || is_subclass_of($value, 'DateTime')) {
@@ -310,7 +310,7 @@ class Manager
 		$values = array();
 		foreach (array_keys($entityAttributes->getProperties()) as $propertyName) {
 			$value = DataHelperLoader::getPropertyValue($instance, $propertyName);
-			$values[] = $this->translateValue($value);
+			$values[] = $this->convertValue($value);
 		}
 
 		return md5(serialize($values));
@@ -343,7 +343,7 @@ class Manager
 		if (is_object($entityName)) {
 			$interfaces = class_implements($entityName);
 			if (in_array('doublemcz\dibiorm\IProxy', $interfaces)) {
-				$className = get_class($entityName->getClassInstance());
+				$className = get_parent_class($entityName);
 			} else {
 				$className = get_class($entityName);
 			}
@@ -397,19 +397,23 @@ class Manager
 
 	public function loadProxy(IProxy $proxy)
 	{
-		$joiningColumns = $proxy->getJoiningMap();
-		if (empty($joiningColumns)) {
-			throw new \RuntimeException('Joining columns cannot be empty.');
+		$targetClassMetadata = $this->createClassMetadata($proxy);
+		$relatedClassMetadata = $this->createClassMetadata($proxy->getRelationClass());
+		$joinRelationSpecification = $relatedClassMetadata->getRelationsOneToOne()[$proxy->getKey()];
+		$id = $joinRelationSpecification['join']['referenceColumn'];
+		$join = array($id => $proxy->$id);
+
+		if (!empty($joinRelationSpecification['staticJoin'])) {
+			$join[$joinRelationSpecification['staticJoin']['column']] = $joinRelationSpecification['staticJoin']['value'];
 		}
 
-		$entityAttributes = $this->createClassMetadata($proxy);
-		$data = $this->dibiConnection->select(array_keys($entityAttributes->getProperties()))
-			->from($entityAttributes->getTable())
-			->where($joiningColumns)
+		$data = $this->dibiConnection->select($targetClassMetadata->getColumns())
+			->from($targetClassMetadata->getTable())
+			->where($join)
 			->fetch();
 
 		if (!empty($data)) {
-			DataHelperLoader::loadClass($this, $proxy->getClassInstance(), $data, $entityAttributes);
+			DataHelperLoader::loadClass($this, $proxy, $data, $targetClassMetadata);
 		}
 	}
 
@@ -449,12 +453,6 @@ class Manager
 		return $this->proxiesPath;
 	}
 
-
-	/*******************                     ***********************/
-	/***************     REPOSITORY HANDLERS     *******************/
-	/*******************                     ***********************/
-
-
 	/**
 	 * Finds an entity by given id. For multiple primary key you can pass next parameters by order definition in your entity.
 	 *
@@ -466,22 +464,22 @@ class Manager
 	public function find($entityName, $id)
 	{
 		$this->handleConnection();
-		$entityAttributes = $this->createClassMetadata($entityName);
+		$classMetadata = $this->createClassMetadata($entityName);
 		$args = func_get_args();
 		unset($args[0]);
-		if (count($entityAttributes->getPrimaryKey()) != count(array_values($args))) {
+		if (count($classMetadata->getPrimaryKey()) != count(array_values($args))) {
 			throw new \RuntimeException('You are trying to find and entity with full primary key. Did you forget to specify an another value as an argument?');
 		}
 
-		$primaryKey = array_combine($entityAttributes->getPrimaryKey(), array_values($args));
-		$data = $this->dibiConnection->select(array_keys($entityAttributes->getProperties()))
-			->from($entityAttributes->getTable())
+		$primaryKey = array_combine($classMetadata->getPrimaryKey(), array_values($args));
+		$data = $this->dibiConnection->select($classMetadata->getColumns())
+			->from($classMetadata->getTable())
 			->where($primaryKey)
 			->fetch();
 
-		$instance = DataHelperLoader::CreateFlatClass($this, $entityAttributes, $data);
+		$instance = DataHelperLoader::CreateFlatClass($this, $classMetadata, $data);
 		if ($instance) {
-			$this->registerClass($instance, $entityAttributes, self::FLAG_INSTANCE_UPDATE);
+			$this->registerClass($instance, $classMetadata, self::FLAG_INSTANCE_UPDATE);
 		}
 
 		return $instance;

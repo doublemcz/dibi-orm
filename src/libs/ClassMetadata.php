@@ -2,6 +2,8 @@
 
 namespace Doublemcz\Dibiorm;
 
+use Nette\InvalidArgumentException;
+
 class ClassMetadata
 {
 	const JOIN_ONE_TO_ONE = 'oneToOne';
@@ -21,11 +23,11 @@ class ClassMetadata
 	/** @var string */
 	protected $autoIncrementFieldName;
 	/** @var array */
-	protected $oneToMany = array();
+	protected $oneToManyRelations = array();
 	/** @var array */
-	protected $oneToOne = array();
+	protected $oneToOneRelations = array();
 	/** @var array */
-	protected $manyToMany = array();
+	protected $manyToManyRelations = array();
 	/** @var array */
 	protected $propertyReflections = array();
 	/** @var bool */
@@ -131,10 +133,10 @@ class ClassMetadata
 				'joiningTable' => !empty($docLineParameters['manyToMany']['joiningTable']) ? $docLineParameters['manyToMany']['joiningTable'] : NULL,
 				'joinPrimary' => array_key_exists('joinPrimary', $docLineParameters) ? $docLineParameters['joinPrimary'] : NULL,
 				'joinSecondary' => array_key_exists('joinSecondary', $docLineParameters) ? $docLineParameters['joinSecondary'] : NULL,
-
 			);
 
-			$this->{$relation}[$property->getName()] = $joinParameters;
+			$relationProperty = $relation . 'Relations';
+			$this->{$relationProperty}[$property->getName()] = $joinParameters;
 		}
 	}
 
@@ -200,6 +202,8 @@ class ClassMetadata
 				}
 
 				break;
+			default:
+				throw new InvalidArgumentException(sprintf('Relation %s is unknown', $relation));
 		}
 	}
 
@@ -299,7 +303,7 @@ class ClassMetadata
 	 */
 	public function getRelationsOneToOne()
 	{
-		return $this->oneToOne;
+		return $this->oneToOneRelations;
 	}
 
 	/**
@@ -307,7 +311,7 @@ class ClassMetadata
 	 */
 	public function getRelationsOneToMany()
 	{
-		return $this->oneToMany;
+		return $this->oneToManyRelations;
 	}
 
 	/**
@@ -315,11 +319,11 @@ class ClassMetadata
 	 */
 	public function getRelationsManyToMany()
 	{
-		return $this->manyToMany;
+		return $this->manyToManyRelations;
 	}
 
 	/**
-	 * @return array
+	 * @return \ReflectionProperty[]
 	 */
 	public function getPropertyReflections()
 	{
@@ -366,5 +370,18 @@ class ClassMetadata
 	public function getEntityName()
 	{
 		return substr($this->className, strrpos($this->className, '/') + 1);
+	}
+
+	/**
+	 * @return array
+	 */
+	public function getColumns()
+	{
+		$columns = array_keys($this->getProperties());
+		foreach ($this->getRelationsOneToOne() as $relation) {
+			$columns[] = $relation['join']['column'];
+		}
+
+		return $columns;
 	}
 }
