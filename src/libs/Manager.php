@@ -199,8 +199,10 @@ class Manager
 		}
 
 		$values = $this->getInstanceValueMap($instance, $entityAttributes);
-		$insertId = $this->dibiConnection->insert($entityAttributes->getTable(), $values)->execute(\dibi::IDENTIFIER);
+		$this->dibiConnection->insert($entityAttributes->getTable(), $values)->execute();
+		$insertId = NULL;
 		if ($entityAttributes->getAutoIncrementFieldName()) {
+			$insertId = $this->dibiConnection->getInsertId();
 			if (!$insertId) {
 				throw new \RuntimeException('Entity has set autoIncrement flag but no incremented values was returned from DB.');
 			}
