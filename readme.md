@@ -1,4 +1,4 @@
-# Dibi ORM
+# Dibi ORM - EXPERIMENTAL
 
 Dibi ORM is lightweight ORM solution based on Dibi. ORM logic comes from Doctrine 2 but is very simplified. Focus is also on performance.
 
